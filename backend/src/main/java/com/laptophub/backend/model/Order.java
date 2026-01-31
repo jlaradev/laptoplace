@@ -29,10 +29,19 @@ public class Order {
     private BigDecimal total;
     
     @Column(nullable = false)
-    private String estado = "pendiente";
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private OrderStatus estado = OrderStatus.PENDIENTE;
     
     @Column(columnDefinition = "TEXT", nullable = false)
     private String direccionEnvio;
+
+    /**
+     * Fecha límite para completar el pago.
+     * Si se supera y el pago no se completa, la orden expira y se libera stock.
+     */
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

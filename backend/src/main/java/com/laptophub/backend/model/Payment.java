@@ -31,7 +31,9 @@ public class Payment {
     private BigDecimal monto;
     
     @Column(nullable = false)
-    private String estado = "pendiente";
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private PaymentStatus estado = PaymentStatus.PENDIENTE;
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
