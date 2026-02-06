@@ -16,11 +16,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -59,6 +62,49 @@ public class ProductImageControllerTest {
     private static String productId;
     private static String imageId1;
     private static String imageId2;
+
+    /**
+     * Obtiene el MediaType basado en la extensión del archivo
+     */
+    private String getMediaType(String filename) {
+        if (filename.endsWith(".webp")) {
+            return "image/webp";
+        } else if (filename.endsWith(".png")) {
+            return MediaType.IMAGE_PNG_VALUE;
+        } else if (filename.endsWith(".gif")) {
+            return MediaType.IMAGE_GIF_VALUE;
+        } else if (filename.endsWith(".jpg") || filename.endsWith(".jpeg")) {
+            return MediaType.IMAGE_JPEG_VALUE;
+        } else {
+            return MediaType.IMAGE_JPEG_VALUE; // default
+        }
+    }
+
+    /**
+     * Obtiene el contenido de una imagen del directorio test-images
+     * Busca el archivo con cualquier extensión (webp, jpg, png, gif)
+     * Si no existe, retorna un contenido dummy
+     */
+    private byte[] getImageContent(String filename) throws Exception {
+        String baseName = filename.substring(0, filename.lastIndexOf("."));
+        String[] extensions = {".webp", ".jpg", ".jpeg", ".png", ".gif"};
+        
+        for (String ext : extensions) {
+            try {
+                ClassPathResource resource = new ClassPathResource("test-images/" + baseName + ext);
+                if (resource.exists()) {
+                    return Files.readAllBytes(resource.getFile().toPath());
+                }
+            } catch (Exception e) {
+                // continúa buscando
+            }
+        }
+        
+        System.out.println("⚠️  Imagen no encontrada: " + baseName + ".*");
+        System.out.println("   Colocar la imagen en: src/test/resources/test-images/" + baseName + "{.webp,.jpg,.png,.gif}");
+        System.out.println("   Usando contenido dummy por ahora...\n");
+        return ("dummy image: " + filename).getBytes();
+    }
 
     /**
      * Limpia la base de datos una sola vez antes de todos los tests
@@ -119,14 +165,17 @@ public class ProductImageControllerTest {
     public void test2_AddFirstImage() throws Exception {
         System.out.println("\n=== TEST 2: Agregar primera imagen al producto ===");
         
-        MvcResult result = mockMvc.perform(post("/api/products/" + productId + "/images")
-                        .param("url", "https://example.com/asus-rog-front.jpg")
+        byte[] imageContent = getImageContent("laptop-front.jpg");
+        
+        MvcResult result = mockMvc.perform(multipart("/api/products/" + productId + "/images")
+                        .file(new MockMultipartFile(
+                                "file", "laptop-front.jpg", getMediaType("laptop-front.jpg"), imageContent))
                         .param("orden", "1")
                         .param("descripcion", "Vista frontal"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.url").value("https://example.com/asus-rog-front.jpg"))
+                .andExpect(jsonPath("$.url").exists())
                 .andExpect(jsonPath("$.orden").value(1))
                 .andExpect(jsonPath("$.descripcion").value("Vista frontal"))
                 .andReturn();
@@ -146,8 +195,11 @@ public class ProductImageControllerTest {
     public void test3_AddSecondImage() throws Exception {
         System.out.println("\n=== TEST 3: Agregar segunda imagen al producto ===");
         
-        MvcResult result = mockMvc.perform(post("/api/products/" + productId + "/images")
-                        .param("url", "https://example.com/asus-rog-side.jpg")
+        byte[] imageContent = getImageContent("laptop-side.jpg");
+        
+        MvcResult result = mockMvc.perform(multipart("/api/products/" + productId + "/images")
+                        .file(new MockMultipartFile(
+                                "file", "laptop-side.jpg", getMediaType("laptop-side.jpg"), imageContent))
                         .param("orden", "2")
                         .param("descripcion", "Vista lateral"))
                 .andDo(print())
@@ -194,7 +246,7 @@ public class ProductImageControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(imageId1))
-                .andExpect(jsonPath("$.url").value("https://example.com/asus-rog-front.jpg"))
+                .andExpect(jsonPath("$.url").exists())
                 .andExpect(jsonPath("$.descripcion").value("Vista frontal"));
         
         System.out.println("✅ TEST 5 PASÓ: Imagen encontrada por ID\n");
@@ -248,16 +300,21 @@ public class ProductImageControllerTest {
     public void test8_CreateFinalImagesForVerification() throws Exception {
         System.out.println("\n=== TEST 8: Crear imágenes finales para verificación manual ===");
         
+        byte[] imageContent3 = getImageContent("laptop-keyboard.jpg");
+        byte[] imageContent4 = getImageContent("laptop-ports.jpg");
+        
         // Agregar tercera imagen
-        mockMvc.perform(post("/api/products/" + productId + "/images")
-                        .param("url", "https://example.com/asus-rog-keyboard.jpg")
+        mockMvc.perform(multipart("/api/products/" + productId + "/images")
+                        .file(new MockMultipartFile(
+                                "file", "laptop-keyboard.jpg", getMediaType("laptop-keyboard.jpg"), imageContent3))
                         .param("orden", "3")
                         .param("descripcion", "Vista del teclado RGB"))
                 .andExpect(status().isOk());
         
         // Agregar cuarta imagen
-        mockMvc.perform(post("/api/products/" + productId + "/images")
-                        .param("url", "https://example.com/asus-rog-ports.jpg")
+        mockMvc.perform(multipart("/api/products/" + productId + "/images")
+                        .file(new MockMultipartFile(
+                                "file", "laptop-ports.jpg", getMediaType("laptop-ports.jpg"), imageContent4))
                         .param("orden", "4")
                         .param("descripcion", "Puertos laterales"))
                 .andExpect(status().isOk());

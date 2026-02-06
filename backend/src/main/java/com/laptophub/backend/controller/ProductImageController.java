@@ -4,10 +4,13 @@ import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.service.CloudinaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -20,6 +23,9 @@ public class ProductImageController {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     /**
      * Agregar imagen a un producto
      * POST /api/products/{productId}/images
@@ -28,15 +34,18 @@ public class ProductImageController {
     @SuppressWarnings("null")
     public ResponseEntity<ProductImage> addImage(
             @PathVariable Long productId,
-            @RequestParam String url,
+            @RequestParam MultipartFile file,
             @RequestParam Integer orden,
-            @RequestParam(required = false) String descripcion) {
+            @RequestParam(required = false) String descripcion) throws IOException {
         
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         
+        // Subir imagen a Cloudinary
+        String imageUrl = cloudinaryService.uploadImage(file, "laptophub/products");
+        
         ProductImage image = ProductImage.builder()
-                .url(url)
+                .url(imageUrl)
                 .orden(orden)
                 .descripcion(descripcion)
                 .product(product)
