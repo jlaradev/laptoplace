@@ -3,6 +3,7 @@ package com.laptophub.backend.service;
 
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +26,7 @@ public class ProductService {
     @SuppressWarnings("null")
     public Product findById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
     }
     
     @Transactional(readOnly = true)
@@ -68,7 +69,7 @@ public class ProductService {
     @SuppressWarnings("null")
     public void deleteProduct(Long id) {
         if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Producto no encontrado con id: " + id);
+            throw new ResourceNotFoundException("Producto no encontrado con id: " + id);
         }
         productRepository.deleteById(id);
     }

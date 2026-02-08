@@ -7,6 +7,8 @@ import com.laptophub.backend.model.PaymentStatus;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.OrderRepository;
 import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.exception.ResourceNotFoundException;
+import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,7 +38,7 @@ public class OrderService {
         Cart cart = cartService.getOrCreateCart(userId);
         
         if (cart.getItems().isEmpty()) {
-            throw new RuntimeException("El carrito está vacío");
+            throw new ValidationException("El carrito está vacío");
         }
         
         for (CartItem cartItem : cart.getItems()) {
@@ -45,7 +47,7 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + productId));
             
             if (product.getStock() < cartItem.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para producto " + product.getId());
+                throw new ValidationException("Stock insuficiente para producto " + product.getId());
             }
 
             cartItem.setProduct(product);
@@ -86,7 +88,7 @@ public class OrderService {
         try {
             paymentService.createPayment(savedOrder, total);
         } catch (com.stripe.exception.StripeException e) {
-            throw new RuntimeException("Error al procesar pago con Stripe: " + e.getMessage(), e);
+            throw new ValidationException("Error al procesar pago con Stripe: " + e.getMessage());
         }
         
         cartService.clearCart(userId);
@@ -98,7 +100,7 @@ public class OrderService {
     @SuppressWarnings("null")
     public Order findById(Long orderId) {
         return orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Orden no encontrada con id: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada con id: " + orderId));
     }
     
     @Transactional(readOnly = true)
@@ -138,7 +140,7 @@ public class OrderService {
                            order.getEstado() == OrderStatus.PENDIENTE_PAGO;
         
         if (!canCancel) {
-            throw new RuntimeException(
+            throw new ValidationException(
                     "Solo se pueden cancelar órdenes pendientes. Estado actual: " + order.getEstado());
         }
         

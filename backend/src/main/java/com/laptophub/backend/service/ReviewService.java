@@ -5,6 +5,9 @@ import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.Review;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ReviewRepository;
+import com.laptophub.backend.exception.ConflictException;
+import com.laptophub.backend.exception.ResourceNotFoundException;
+import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +28,7 @@ public class ReviewService {
     
     private void validateRating(Integer rating) {
         if (rating < 1 || rating > 5) {
-            throw new RuntimeException("El rating debe estar entre 1 y 5");
+            throw new ValidationException("El rating debe estar entre 1 y 5");
         }
     }
     
@@ -39,7 +42,7 @@ public class ReviewService {
         
         Optional<Review> existingReview = reviewRepository.findByProductAndUser(product, user);
         if (existingReview.isPresent()) {
-            throw new RuntimeException("Ya has dejado una reseña para este producto");
+            throw new ConflictException("Ya has dejado una reseña para este producto");
         }
         
         Review review = Review.builder()
@@ -86,7 +89,7 @@ public class ReviewService {
     @SuppressWarnings("null")
     public void deleteReview(Long reviewId) {
         if (!reviewRepository.existsById(reviewId)) {
-            throw new RuntimeException("Review no encontrada con id: " + reviewId);
+            throw new ResourceNotFoundException("Review no encontrada con id: " + reviewId);
         }
         reviewRepository.deleteById(reviewId);
     }

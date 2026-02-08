@@ -5,6 +5,8 @@ import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.PaymentStatus;
 import com.laptophub.backend.repository.PaymentRepository;
+import com.laptophub.backend.exception.ResourceNotFoundException;
+import com.laptophub.backend.exception.ValidationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +48,7 @@ public class PaymentService {
     @SuppressWarnings("null")
     public Payment findById(Long paymentId) {
         return paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new RuntimeException("Payment no encontrado con id: " + paymentId));
+                .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con id: " + paymentId));
     }
     
     @Transactional(readOnly = true)
@@ -91,7 +93,7 @@ public class PaymentService {
         String stripePaymentId = payment.getStripePaymentId();
 
         if (stripePaymentId == null) {
-            throw new RuntimeException("El pago no tiene asociado un stripePaymentId");
+            throw new ValidationException("El pago no tiene asociado un stripePaymentId");
         }
 
         // Confirmar el pago con Stripe

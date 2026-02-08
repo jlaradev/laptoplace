@@ -6,6 +6,8 @@ import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
+import com.laptophub.backend.exception.ResourceNotFoundException;
+import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +54,7 @@ public class CartService {
     @SuppressWarnings("null")
     public Cart addToCart(UUID userId, Long productId, Integer cantidad) {
         if (cantidad <= 0) {
-            throw new RuntimeException("La cantidad debe ser mayor a 0");
+            throw new ValidationException("La cantidad debe ser mayor a 0");
         }
         
         Cart cart = getOrCreateCart(userId);
@@ -82,11 +84,11 @@ public class CartService {
     @SuppressWarnings("null")
     public CartItem updateQuantity(Long cartItemId, Integer newQuantity) {
         if (newQuantity <= 0) {
-            throw new RuntimeException("La cantidad debe ser mayor a 0. Use removeFromCart para eliminar.");
+            throw new ValidationException("La cantidad debe ser mayor a 0. Use removeFromCart para eliminar.");
         }
         
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("CartItem no encontrado con id: " + cartItemId));
+                .orElseThrow(() -> new ResourceNotFoundException("CartItem no encontrado con id: " + cartItemId));
         
         item.setCantidad(newQuantity);
         return cartItemRepository.save(item);

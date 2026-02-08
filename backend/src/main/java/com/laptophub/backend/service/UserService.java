@@ -3,6 +3,8 @@ package com.laptophub.backend.service;
 
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.exception.ConflictException;
+import com.laptophub.backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +22,7 @@ public class UserService {
     @Transactional
     public User registerUser(User user) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new RuntimeException("El email " + user.getEmail() + " ya está registrado");
+            throw new ConflictException("El email " + user.getEmail() + " ya está registrado");
         }
         return userRepository.save(user);
     }
@@ -29,13 +31,13 @@ public class UserService {
     @SuppressWarnings("null")
     public User findById(UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
     }
     
     @Transactional(readOnly = true)
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
     }
     
     @Transactional(readOnly = true)
