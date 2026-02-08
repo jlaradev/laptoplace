@@ -1,10 +1,15 @@
 package com.laptophub.backend.controller;
 
+import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.PaymentStatus;
+import com.laptophub.backend.service.OrderService;
 import com.laptophub.backend.service.PaymentService;
+import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -12,6 +17,16 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final OrderService orderService;
+
+    @PostMapping("/create")
+    public Payment createPayment(
+            @RequestParam Long orderId,
+            @RequestParam BigDecimal amount
+    ) throws StripeException {
+        Order order = orderService.findById(orderId);
+        return paymentService.createPayment(order, amount);
+    }
 
     @GetMapping("/{paymentId}")
     public Payment findById(@PathVariable Long paymentId) {
@@ -37,6 +52,24 @@ public class PaymentController {
             @RequestParam String value
     ) {
         return paymentService.setStripePaymentId(paymentId, value);
+    }
+
+
+    @GetMapping("/{paymentId}/sync")
+    public Payment syncPaymentStatus(@PathVariable Long paymentId) throws StripeException {
+        return paymentService.checkAndSyncPaymentStatus(paymentId);
+    }
+
+
+    @PostMapping("/{paymentId}/process")
+    public Payment processPayment(@PathVariable Long paymentId) throws StripeException {
+        return paymentService.processStripePayment(paymentId);
+    }
+
+
+    @PostMapping("/{paymentId}/cancel")
+    public Payment cancelPayment(@PathVariable Long paymentId) throws StripeException {
+        return paymentService.cancelPayment(paymentId);
     }
 
     @PostMapping("/{paymentId}/simulate")

@@ -81,7 +81,11 @@ public class OrderService {
             productRepository.save(product);
         }
         
-        paymentService.createPayment(savedOrder, total);
+        try {
+            paymentService.createPayment(savedOrder, total);
+        } catch (com.stripe.exception.StripeException e) {
+            throw new RuntimeException("Error al procesar pago con Stripe: " + e.getMessage(), e);
+        }
         
         cartService.clearCart(userId);
         

@@ -5,6 +5,8 @@ import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.PaymentStatus;
 import com.laptophub.backend.repository.PaymentRepository;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,17 +18,27 @@ import java.math.BigDecimal;
 public class PaymentService {
     
     private final PaymentRepository paymentRepository;
+    private final StripeService stripeService;
     
     @Transactional
     @SuppressWarnings("null")
-    public Payment createPayment(Order order, BigDecimal amount) {
+    public Payment createPayment(Order order, BigDecimal amount) throws StripeException {
         Payment payment = Payment.builder()
                 .order(order)
                 .monto(amount)
                 .estado(PaymentStatus.PENDIENTE)
-                .stripePaymentId(null)
                 .build();
         
+        payment = paymentRepository.save(payment);
+
+        // Crear PaymentIntent en Stripe
+        PaymentIntent paymentIntent = stripeService.createPaymentIntent(
+                order.getId(),
+                amount,
+                order.getUser().getEmail()
+        );
+
+        payment.setStripePaymentId(paymentIntent.getId());
         return paymentRepository.save(payment);
     }
     
@@ -69,6 +81,67 @@ public class PaymentService {
             payment.setEstado(PaymentStatus.FALLIDO);
         }
         
+        return paymentRepository.save(payment);
+    }
+
+
+    @Transactional
+    public Payment processStripePayment(Long paymentId) throws StripeException {
+        Payment payment = findById(paymentId);
+        String stripePaymentId = payment.getStripePaymentId();
+
+        if (stripePaymentId == null) {
+            throw new RuntimeException("El pago no tiene asociado un stripePaymentId");
+        }
+
+        // Confirmar el pago con Stripe
+        PaymentIntent paymentIntent = stripeService.confirmPayment(stripePaymentId);
+
+        // Actualizar el estado del pago basado en la respuesta de Stripe
+        if ("succeeded".equals(paymentIntent.getStatus())) {
+            payment.setEstado(PaymentStatus.COMPLETADO);
+        } else if ("requires_action".equals(paymentIntent.getStatus())) {
+            payment.setEstado(PaymentStatus.PENDIENTE);
+        } else {
+            payment.setEstado(PaymentStatus.FALLIDO);
+        }
+
+        return paymentRepository.save(payment);
+    }
+
+    /**
+     * Verifica el estado de un pago en Stripe y actualiza el estado local
+     */
+    @Transactional
+    public Payment checkAndSyncPaymentStatus(Long paymentId) throws StripeException {
+        Payment payment = findById(paymentId);
+        String stripePaymentId = payment.getStripePaymentId();
+
+        if (stripePaymentId == null) {
+            return payment;
+        }
+
+        boolean isSucceeded = stripeService.isPaymentSucceeded(stripePaymentId);
+
+        if (isSucceeded && payment.getEstado() != PaymentStatus.COMPLETADO) {
+            payment.setEstado(PaymentStatus.COMPLETADO);
+            return paymentRepository.save(payment);
+        }
+
+        return payment;
+    }
+
+
+    @Transactional
+    public Payment cancelPayment(Long paymentId) throws StripeException {
+        Payment payment = findById(paymentId);
+        String stripePaymentId = payment.getStripePaymentId();
+
+        if (stripePaymentId != null) {
+            stripeService.cancelPaymentIntent(stripePaymentId);
+        }
+
+        payment.setEstado(PaymentStatus.FALLIDO);
         return paymentRepository.save(payment);
     }
 }
