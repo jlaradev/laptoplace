@@ -1,6 +1,8 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.dto.ProductCreateDTO;
+import com.laptophub.backend.dto.ProductResponseDTO;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.repository.CartItemRepository;
@@ -33,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SuppressWarnings("null")
 public class ProductControllerTest {
 
     @Autowired
@@ -84,7 +87,7 @@ public class ProductControllerTest {
         
         System.out.println("\n=== TEST 1: Crear nuevo producto (POST /api/products) ===");
         
-        Product newProduct = Product.builder()
+        ProductCreateDTO newProduct = ProductCreateDTO.builder()
                 .nombre(TEST_PRODUCT_NAME)
                 .descripcion("Laptop de alto rendimiento para profesionales")
                 .precio(new BigDecimal("1299.99"))
@@ -108,19 +111,23 @@ public class ProductControllerTest {
                 .andExpect(jsonPath("$.marca").value(TEST_BRAND))
                 .andExpect(jsonPath("$.precio").value(1299.99))
                 .andExpect(jsonPath("$.stock").value(25))
+                .andExpect(jsonPath("$.imagenes").isArray())
+                .andExpect(jsonPath("$.resenas").isArray())
                 .andReturn();
 
         // Guardar el ID para los siguientes tests
         String response = result.getResponse().getContentAsString();
-        Product createdProduct = objectMapper.readValue(response, Product.class);
+        ProductResponseDTO createdProduct = objectMapper.readValue(response, ProductResponseDTO.class);
         productId = createdProduct.getId().toString();
         
-        // Agregar imagen principal usando ProductImage
+        // Agregar imagen principal manualmente a la BD
+        Product product = productRepository.findById(Long.parseLong(productId))
+                .orElseThrow(() -> new RuntimeException("Product not found"));
         ProductImage mainImage = ProductImage.builder()
                 .url("https://example.com/dell-xps-15.jpg")
+                .product(product)
                 .orden(0)
                 .descripcion("Imagen principal")
-                .product(createdProduct)
                 .build();
         productImageRepository.save(mainImage);
         

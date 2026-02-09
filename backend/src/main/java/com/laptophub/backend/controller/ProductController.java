@@ -1,10 +1,14 @@
 package com.laptophub.backend.controller;
 
-import com.laptophub.backend.model.Product;
+import com.laptophub.backend.dto.ProductCreateDTO;
+import com.laptophub.backend.dto.ProductListDTO;
+import com.laptophub.backend.dto.ProductResponseDTO;
 import com.laptophub.backend.service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -15,33 +19,33 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public Page<Product> findAll(Pageable pageable) {
+    public Page<ProductListDTO> findAll(@NonNull Pageable pageable) {
         return productService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
-    public Product findById(@PathVariable Long id) {
-        return productService.findById(id);
+    public ProductResponseDTO findById(@PathVariable Long id) {
+        return productService.findByIdDTO(id);
     }
 
     @GetMapping("/search")
-    public Page<Product> searchByName(@RequestParam String nombre, Pageable pageable) {
+    public Page<ProductListDTO> searchByName(@RequestParam String nombre, @NonNull Pageable pageable) {
         return productService.searchByName(nombre, pageable);
     }
 
     @GetMapping("/brand")
-    public Page<Product> findByBrand(@RequestParam String marca, Pageable pageable) {
+    public Page<ProductListDTO> findByBrand(@RequestParam String marca, @NonNull Pageable pageable) {
         return productService.findByBrand(marca, pageable);
     }
 
     @PostMapping
-    public Product create(@RequestBody Product product) {
-        return productService.createProduct(product);
+    public ProductResponseDTO create(@Valid @RequestBody ProductCreateDTO dto) {
+        return productService.createProduct(dto);
     }
 
     @PutMapping("/{id}")
-    public Product update(@PathVariable Long id, @RequestBody Product product) {
-        return productService.updateProduct(id, product);
+    public ProductResponseDTO update(@PathVariable Long id, @Valid @RequestBody ProductCreateDTO dto) {
+        return productService.updateProduct(id, dto);
     }
 
     @DeleteMapping("/{id}")

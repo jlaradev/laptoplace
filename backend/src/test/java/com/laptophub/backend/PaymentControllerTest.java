@@ -1,7 +1,8 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.laptophub.backend.model.Order;
+import com.laptophub.backend.dto.AddToCartDTO;
+import com.laptophub.backend.dto.CreateOrderDTO;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -37,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SuppressWarnings("null")
 public class PaymentControllerTest {
 
     @Autowired
@@ -139,21 +142,31 @@ public class PaymentControllerTest {
                 .build();
         productImageRepository.save(mainImage);
         
-        // Agregar producto al carrito
+        // Agregar producto al carrito usando DTO
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
-        // Crear orden
+        // Crear orden usando CreateOrderDTO
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Payment 123")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Payment 123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Order createdOrder = objectMapper.readValue(response, Order.class);
-        orderId = createdOrder.getId().toString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        orderId = jsonNode.get("id").asText();
         
         // Obtener el payment creado automáticamente con la orden
         Payment payment = paymentRepository.findAll().stream()
@@ -251,22 +264,33 @@ public class PaymentControllerTest {
         System.out.println("\n=== TEST 6: Simular pago exitoso (POST /api/payments/{paymentId}/simulate) ===");
         
         // Crear una nueva orden y payment para esta prueba
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Simulate 456")
+                .build();
+        
         MvcResult orderResult = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Simulate 456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
                 .andReturn();
 
         String orderResponse = orderResult.getResponse().getContentAsString();
-        Order newOrder = objectMapper.readValue(orderResponse, Order.class);
+        com.fasterxml.jackson.databind.JsonNode orderNode = objectMapper.readTree(orderResponse);
+        String newOrderId = orderNode.get("id").asText();
         
         // Obtener el payment de la nueva orden
         Payment newPayment = paymentRepository.findAll().stream()
-                .filter(p -> p.getOrder().getId().equals(newOrder.getId()))
+                .filter(p -> p.getOrder().getId().toString().equals(newOrderId))
                 .findFirst()
                 .orElseThrow();
         
@@ -288,22 +312,33 @@ public class PaymentControllerTest {
         System.out.println("\n=== TEST 7: Simular pago fallido (POST /api/payments/{paymentId}/simulate) ===");
         
         // Crear una nueva orden y payment para esta prueba
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Failed 789")
+                .build();
+        
         MvcResult orderResult = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Failed 789"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
                 .andReturn();
 
         String orderResponse = orderResult.getResponse().getContentAsString();
-        Order newOrder = objectMapper.readValue(orderResponse, Order.class);
+        com.fasterxml.jackson.databind.JsonNode orderNode = objectMapper.readTree(orderResponse);
+        String newOrderId = orderNode.get("id").asText();
         
         // Obtener el payment de la nueva orden
         Payment newPayment = paymentRepository.findAll().stream()
-                .filter(p -> p.getOrder().getId().equals(newOrder.getId()))
+                .filter(p -> p.getOrder().getId().toString().equals(newOrderId))
                 .findFirst()
                 .orElseThrow();
         
@@ -325,22 +360,33 @@ public class PaymentControllerTest {
         System.out.println("\n=== TEST 8: Crear payment final para verificación manual ===");
         
         // Crear una nueva orden y payment
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Final Verification")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Final Verification"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Order finalOrder = objectMapper.readValue(response, Order.class);
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        String finalOrderId = jsonNode.get("id").asText();
         
         // Obtener el payment
         Payment finalPayment = paymentRepository.findAll().stream()
-                .filter(p -> p.getOrder().getId().equals(finalOrder.getId()))
+                .filter(p -> p.getOrder().getId().toString().equals(finalOrderId))
                 .findFirst()
                 .orElseThrow();
         

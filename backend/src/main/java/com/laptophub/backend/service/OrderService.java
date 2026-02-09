@@ -1,17 +1,21 @@
 package com.laptophub.backend.service;
 
 
+import com.laptophub.backend.dto.*;
 import com.laptophub.backend.model.*;
 import com.laptophub.backend.model.OrderStatus;
 import com.laptophub.backend.model.PaymentStatus;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.OrderRepository;
+import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.exception.ResourceNotFoundException;
 import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +32,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
+    private final ProductImageRepository productImageRepository;
+    private final ReviewRepository reviewRepository;
     private final UserService userService;
     private final CartService cartService;
     private final PaymentService paymentService;
@@ -86,7 +93,8 @@ public class OrderService {
         }
         
         try {
-            paymentService.createPayment(savedOrder, total);
+            Payment payment = paymentService.createPayment(savedOrder, total);
+            savedOrder.setPayment(payment);
         } catch (com.stripe.exception.StripeException e) {
             throw new ValidationException("Error al procesar pago con Stripe: " + e.getMessage());
         }
@@ -104,7 +112,7 @@ public class OrderService {
     }
     
     @Transactional(readOnly = true)
-    public Page<Order> findByUserId(UUID userId, Pageable pageable) {
+    public Page<Order> findByUserId(UUID userId, @NonNull Pageable pageable) {
         User user = userService.findById(userId);
         return orderRepository.findByUser(user, pageable);
     }
@@ -116,7 +124,7 @@ public class OrderService {
     }
     
     @Transactional(readOnly = true)
-    public Page<Order> findByStatus(OrderStatus estado, Pageable pageable) {
+    public Page<Order> findByStatus(OrderStatus estado, @NonNull Pageable pageable) {
         return orderRepository.findByEstado(estado, pageable);
     }
     
@@ -183,5 +191,72 @@ public class OrderService {
             product.setStock(product.getStock() + item.getCantidad());
             productRepository.save(product);
         }
+    }
+    
+    // Métodos que retornan DTOs
+    
+    @Transactional
+    public OrderResponseDTO createOrderFromCartDTO(UUID userId, CreateOrderDTO dto) {
+        Order order = createOrderFromCart(userId, dto.getDireccionEnvio());
+        return mapOrderToDTO(order);
+    }
+    
+    @Transactional(readOnly = true)
+    public OrderResponseDTO findByIdDTO(Long orderId) {
+        Order order = findById(orderId);
+        return mapOrderToDTO(order);
+    }
+    
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> findAllDTO(@NonNull Pageable pageable) {
+        return orderRepository.findAll(pageable).map(this::mapOrderToDTO);
+    }
+    
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> findByUserIdDTO(UUID userId, @NonNull Pageable pageable) {
+        return findByUserId(userId, pageable).map(this::mapOrderToDTO);
+    }
+    
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> findByStatusDTO(OrderStatus estado, @NonNull Pageable pageable) {
+        return findByStatus(estado, pageable).map(this::mapOrderToDTO);
+    }
+    
+    @Transactional
+    public OrderResponseDTO updateOrderStatusDTO(Long orderId, OrderStatus newStatus) {
+        Order order = updateOrderStatus(orderId, newStatus);
+        return mapOrderToDTO(order);
+    }
+    
+    @Transactional
+    public OrderResponseDTO cancelOrderDTO(Long orderId) {
+        Order order = cancelOrder(orderId);
+        return mapOrderToDTO(order);
+    }
+    
+    private OrderResponseDTO mapOrderToDTO(Order order) {
+        List<OrderItemResponseDTO> items = order.getOrderItems().stream()
+                .map(this::mapOrderItemToDTO)
+                .collect(Collectors.toList());
+        
+        PaymentResponseDTO payment = order.getPayment() != null 
+                ? DTOMapper.toPaymentResponse(order.getPayment()) 
+                : null;
+        
+        return DTOMapper.toOrderResponse(order, items, payment);
+    }
+    
+    private OrderItemResponseDTO mapOrderItemToDTO(OrderItem item) {
+        Product product = item.getProduct();
+        List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(product.getId());
+        ProductImage mainImage = images.isEmpty() ? null : images.get(0);
+        
+        List<Review> reviews = reviewRepository.findByProduct(product);
+        Double avgRating = reviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
+        
+        return DTOMapper.toOrderItemResponse(item, mainImage, avgRating);
     }
 }

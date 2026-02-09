@@ -1,10 +1,14 @@
 package com.laptophub.backend.controller;
 
-import com.laptophub.backend.model.Review;
+import com.laptophub.backend.dto.CreateReviewDTO;
+import com.laptophub.backend.dto.ReviewResponseDTO;
+import com.laptophub.backend.dto.UpdateReviewDTO;
 import com.laptophub.backend.service.ReviewService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,22 +21,17 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @PostMapping
-    public Review create(
-            @RequestParam Long productId,
-            @RequestParam UUID userId,
-            @RequestParam Integer rating,
-            @RequestParam(required = false) String comentario
-    ) {
-        return reviewService.createReview(productId, userId, rating, comentario);
+    public ReviewResponseDTO create(@Valid @RequestBody CreateReviewDTO dto, @RequestParam UUID userId) {
+        return reviewService.createReview(dto, userId);
     }
 
     @GetMapping("/product/{productId}")
-    public Page<Review> getByProduct(@PathVariable Long productId, Pageable pageable) {
+    public Page<ReviewResponseDTO> getByProduct(@PathVariable Long productId, @NonNull Pageable pageable) {
         return reviewService.getReviewsByProduct(productId, pageable);
     }
 
     @GetMapping("/product/{productId}/user/{userId}")
-    public Review getUserReview(
+    public ReviewResponseDTO getUserReview(
             @PathVariable Long productId,
             @PathVariable UUID userId
     ) {
@@ -40,12 +39,11 @@ public class ReviewController {
     }
 
     @PutMapping("/{reviewId}")
-    public Review update(
+    public ReviewResponseDTO update(
             @PathVariable Long reviewId,
-            @RequestParam Integer rating,
-            @RequestParam(required = false) String comentario
+            @Valid @RequestBody UpdateReviewDTO dto
     ) {
-        return reviewService.updateReview(reviewId, rating, comentario);
+        return reviewService.updateReview(reviewId, dto);
     }
 
     @DeleteMapping("/{reviewId}")

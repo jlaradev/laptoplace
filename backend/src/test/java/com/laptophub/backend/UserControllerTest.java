@@ -1,7 +1,8 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.laptophub.backend.model.User;
+import com.laptophub.backend.dto.UserRegisterDTO;
+import com.laptophub.backend.dto.UserResponseDTO;
 import com.laptophub.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
@@ -26,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SuppressWarnings("null")
 public class UserControllerTest {
 
     @Autowired
@@ -60,7 +62,7 @@ public class UserControllerTest {
         
         System.out.println("\n=== TEST 1: Crear nuevo usuario (POST /api/users/register) ===");
         
-        User newUser = User.builder()
+        UserRegisterDTO newUser = UserRegisterDTO.builder()
                 .email(TEST_EMAIL)
                 .password("password123")
                 .nombre("Juan")
@@ -78,11 +80,12 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.email").value(TEST_EMAIL))
                 .andExpect(jsonPath("$.nombre").value("Juan"))
                 .andExpect(jsonPath("$.apellido").value("Pérez"))
+                .andExpect(jsonPath("$.password").doesNotExist())
                 .andReturn();
 
         // Guardar el ID para los siguientes tests
         String response = result.getResponse().getContentAsString();
-        User createdUser = objectMapper.readValue(response, User.class);
+        UserResponseDTO createdUser = objectMapper.readValue(response, UserResponseDTO.class);
         userId = createdUser.getId().toString();
         
         System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId + "\n");
@@ -155,7 +158,7 @@ public class UserControllerTest {
     public void test5_UpdateUser() throws Exception {
         System.out.println("\n=== TEST 5: Actualizar usuario (PUT /api/users/{id}) ===");
         
-        User updateData = User.builder()
+        com.laptophub.backend.dto.UserUpdateDTO updateData = com.laptophub.backend.dto.UserUpdateDTO.builder()
                 .nombre("Juan Carlos")
                 .apellido("Pérez González")
                 .telefono("555-9999")
@@ -184,7 +187,7 @@ public class UserControllerTest {
     public void test6_CreateFinalUserForManualVerification() throws Exception {
         System.out.println("\n=== TEST 6: Crear usuario final para verificación manual ===");
         
-        User finalUser = User.builder()
+        UserRegisterDTO finalUser = UserRegisterDTO.builder()
                 .email("verificacion.manual@laptophub.com")
                 .password("password456")
                 .nombre("Usuario")
@@ -203,7 +206,7 @@ public class UserControllerTest {
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        User createdUser = objectMapper.readValue(response, User.class);
+        UserResponseDTO createdUser = objectMapper.readValue(response, UserResponseDTO.class);
         
         System.out.println("✅ TEST 6 PASÓ: Usuario final creado con ID: " + createdUser.getId());
         System.out.println("📋 Verifica en tu gestor de BD el usuario con email: verificacion.manual@laptophub.com\n");

@@ -1,7 +1,8 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.laptophub.backend.model.Order;
+import com.laptophub.backend.dto.AddToCartDTO;
+import com.laptophub.backend.dto.CreateOrderDTO;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.model.User;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -36,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SuppressWarnings("null")
 public class OrderControllerTest {
 
     @Autowired
@@ -147,22 +150,36 @@ public class OrderControllerTest {
     public void test2_CreateOrderFromCart() throws Exception {
         System.out.println("\n=== TEST 2: Crear orden desde carrito (POST /api/orders/user/{userId}) ===");
         
+        // Primero agregar item al carrito usando DTO
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(2)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "2"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
+        // Crear orden desde carrito usando CreateOrderDTO
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Order 123")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Order 123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.estado").value("PENDIENTE_PAGO"))
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.payment").exists())
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Order createdOrder = objectMapper.readValue(response, Order.class);
-        orderId = createdOrder.getId().toString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        orderId = jsonNode.get("id").asText();
         
         System.out.println("✅ TEST 2 PASÓ: Orden creada con ID: " + orderId + "\n");
     }
@@ -267,11 +284,14 @@ public class OrderControllerTest {
     public void test8_FindAllOrders() throws Exception {
         System.out.println("\n=== TEST 8: Listar todas las órdenes (GET /api/orders) ===");
         
-        mockMvc.perform(get("/api/orders"))
+        mockMvc.perform(get("/api/orders")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].id").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.totalElements").exists());
         
         System.out.println("✅ TEST 8 PASÓ: Lista de órdenes obtenida\n");
     }
@@ -284,19 +304,29 @@ public class OrderControllerTest {
     public void test9_CancelOrder() throws Exception {
         System.out.println("\n=== TEST 9: Cancelar orden (POST /api/orders/{orderId}/cancel) ===");
         
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Cancel 456")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Cancel 456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Order cancelOrder = objectMapper.readValue(response, Order.class);
-        String cancelOrderId = cancelOrder.getId().toString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        String cancelOrderId = jsonNode.get("id").asText();
         
         mockMvc.perform(post("/api/orders/" + cancelOrderId + "/cancel"))
                 .andDo(print())
@@ -314,22 +344,32 @@ public class OrderControllerTest {
     public void test10_CreateFinalOrderForVerification() throws Exception {
         System.out.println("\n=== TEST 10: Crear orden final para verificación manual ===");
         
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Final 789")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
-                        .param("direccionEnvio", "Calle Final 789"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Order finalOrder = objectMapper.readValue(response, Order.class);
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
         
-        System.out.println("✅ TEST 10 PASÓ: Orden final creada con ID: " + finalOrder.getId());
+        System.out.println("✅ TEST 10 PASÓ: Orden final creada con ID: " + jsonNode.get("id").asText());
         System.out.println("📋 Verifica en tu gestor de BD la orden del usuario: order.test@laptophub.com\n");
     }
 }

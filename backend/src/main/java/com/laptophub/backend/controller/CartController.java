@@ -1,8 +1,10 @@
 package com.laptophub.backend.controller;
 
-import com.laptophub.backend.model.Cart;
-import com.laptophub.backend.model.CartItem;
+import com.laptophub.backend.dto.AddToCartDTO;
+import com.laptophub.backend.dto.CartResponseDTO;
+import com.laptophub.backend.dto.UpdateCartItemDTO;
 import com.laptophub.backend.service.CartService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,25 +19,24 @@ public class CartController {
     private final CartService cartService;
 
     @GetMapping("/user/{userId}")
-    public Cart getCartByUser(@PathVariable UUID userId) {
-        return cartService.getCartByUserId(userId);
+    public CartResponseDTO getCartByUser(@PathVariable UUID userId) {
+        return cartService.getCartByUserIdDTO(userId);
     }
 
     @PostMapping("/user/{userId}/items")
-    public Cart addToCart(
+    public CartResponseDTO addToCart(
             @PathVariable UUID userId,
-            @RequestParam Long productId,
-            @RequestParam Integer cantidad
+            @Valid @RequestBody AddToCartDTO dto
     ) {
-        return cartService.addToCart(userId, productId, cantidad);
+        return cartService.addToCartDTO(userId, dto);
     }
 
     @PutMapping("/items/{cartItemId}")
-    public CartItem updateQuantity(
+    public CartResponseDTO updateQuantity(
             @PathVariable Long cartItemId,
-            @RequestParam Integer cantidad
+            @Valid @RequestBody UpdateCartItemDTO dto
     ) {
-        return cartService.updateQuantity(cartItemId, cantidad);
+        return cartService.updateQuantityDTO(cartItemId, dto);
     }
 
     @DeleteMapping("/items/{cartItemId}")

@@ -1,10 +1,14 @@
 package com.laptophub.backend.controller;
 
-import com.laptophub.backend.model.User;
+import com.laptophub.backend.dto.UserRegisterDTO;
+import com.laptophub.backend.dto.UserResponseDTO;
+import com.laptophub.backend.dto.UserUpdateDTO;
 import com.laptophub.backend.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,27 +21,27 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public User register(@RequestBody User user) {
-        return userService.registerUser(user);
+    public UserResponseDTO register(@Valid @RequestBody UserRegisterDTO dto) {
+        return userService.registerUser(dto);
     }
 
     @GetMapping("/{id}")
-    public User findById(@PathVariable UUID id) {
-        return userService.findById(id);
+    public UserResponseDTO findById(@PathVariable UUID id) {
+        return userService.findByIdDTO(id);
     }
 
     @GetMapping
-    public Page<User> findAll(Pageable pageable) {
-        return userService.findAll(pageable);
+    public Page<UserResponseDTO> findAll(@NonNull Pageable pageable) {
+        return userService.findAllDTO(pageable);
     }
 
     @GetMapping("/email")
-    public User findByEmail(@RequestParam String email) {
-        return userService.findByEmail(email);
+    public UserResponseDTO findByEmail(@RequestParam String email) {
+        return userService.findByEmailDTO(email);
     }
 
     @PutMapping("/{id}")
-    public User update(@PathVariable UUID id, @RequestBody User user) {
-        return userService.updateUser(id, user);
+    public UserResponseDTO update(@PathVariable UUID id, @Valid @RequestBody UserUpdateDTO dto) {
+        return userService.updateUser(id, dto);
     }
 }

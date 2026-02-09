@@ -1,6 +1,8 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.dto.AddToCartDTO;
+import com.laptophub.backend.dto.CreateReviewDTO;
 import com.laptophub.backend.exception.ApiResponse;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.User;
@@ -24,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@SuppressWarnings("null")
 public class ExceptionHandlingIntegrationTest {
 
     @Autowired
@@ -116,10 +119,15 @@ public class ExceptionHandlingIntegrationTest {
     public void testValidationExceptionWhenAddingInvalidQuantityToCart() throws Exception {
         UUID userId = testUser.getId();
         Long productId = testProduct.getId();
+        
+        AddToCartDTO invalidDto = AddToCartDTO.builder()
+                .productId(productId)
+                .cantidad(0) // Inválido
+                .build();
 
         MvcResult result = mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                .param("productId", String.valueOf(productId))
-                .param("cantidad", "0")) // Cantidad inválida
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest())
                 .andReturn();
 
@@ -137,11 +145,16 @@ public class ExceptionHandlingIntegrationTest {
     @Test
     @SuppressWarnings("null")
     public void testValidationExceptionWhenAddingInvalidRatingToReview() throws Exception {
+        CreateReviewDTO invalidDto = CreateReviewDTO.builder()
+                .productId(testProduct.getId())
+                .rating(6) // Inválido (debe estar entre 1 y 5)
+                .comentario("Invalid rating test")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/reviews")
-                .param("productId", String.valueOf(testProduct.getId()))
                 .param("userId", testUser.getId().toString())
-                .param("rating", "6") // Rating inválido (debe estar entre 1 y 5)
-                .param("comentario", "Invalid rating test"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest())
                 .andReturn();
 

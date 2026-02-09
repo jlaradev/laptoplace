@@ -1,11 +1,11 @@
 package com.laptophub.backend.service;
 
-import com.laptophub.backend.model.Cart;
-import com.laptophub.backend.model.CartItem;
-import com.laptophub.backend.model.Product;
-import com.laptophub.backend.model.User;
+import com.laptophub.backend.dto.*;
+import com.laptophub.backend.model.*;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
+import com.laptophub.backend.repository.ProductImageRepository;
+import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.exception.ResourceNotFoundException;
 import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Servicio para gestionar el carrito de compras.
@@ -33,6 +35,8 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final UserService userService;
     private final ProductService productService;
+    private final ProductImageRepository productImageRepository;
+    private final ReviewRepository reviewRepository;
     
     @Transactional
     @SuppressWarnings("null")
@@ -74,7 +78,8 @@ public class CartService {
                     .product(product)
                     .cantidad(cantidad)
                     .build();
-            cartItemRepository.save(newItem);
+            CartItem savedItem = cartItemRepository.save(newItem);
+            cart.getItems().add(savedItem);
         }
         
         return cart;
@@ -124,5 +129,50 @@ public class CartService {
     @Transactional
     public Cart getCartByUserId(UUID userId) {
         return getOrCreateCart(userId);
+    }
+    
+    // Métodos que retornan DTOs
+    
+    @Transactional
+    public CartResponseDTO getCartByUserIdDTO(UUID userId) {
+        Cart cart = getOrCreateCart(userId);
+        return mapCartToDTO(cart);
+    }
+    
+    @Transactional
+    public CartResponseDTO addToCartDTO(UUID userId, AddToCartDTO dto) {
+        Cart cart = addToCart(userId, dto.getProductId(), dto.getCantidad());
+        return mapCartToDTO(cart);
+    }
+    
+    @Transactional
+    public CartResponseDTO updateQuantityDTO(Long cartItemId, UpdateCartItemDTO dto) {
+        CartItem item = updateQuantity(cartItemId, dto.getCantidad());
+        Cart cart = item.getCart();
+        return mapCartToDTO(cart);
+    }
+    
+    private CartResponseDTO mapCartToDTO(Cart cart) {
+        List<CartItemResponseDTO> items = cart.getItems().stream()
+                .map(this::mapCartItemToDTO)
+                .collect(Collectors.toList());
+        
+        BigDecimal total = calculateTotal(cart.getId());
+        
+        return DTOMapper.toCartResponse(cart, items, total);
+    }
+    
+    private CartItemResponseDTO mapCartItemToDTO(CartItem item) {
+        Product product = item.getProduct();
+        List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(product.getId());
+        ProductImage mainImage = images.isEmpty() ? null : images.get(0);
+        
+        List<Review> reviews = reviewRepository.findByProduct(product);
+        Double avgRating = reviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
+        
+        return DTOMapper.toCartItemResponse(item, mainImage, avgRating);
     }
 }

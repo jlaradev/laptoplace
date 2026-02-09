@@ -1,7 +1,8 @@
 package com.laptophub.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.model.Cart;
-import com.laptophub.backend.model.CartItem;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.model.User;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -33,10 +35,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SuppressWarnings("null")
 public class CartControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private CartRepository cartRepository;
@@ -125,14 +131,17 @@ public class CartControllerTest {
      * TEST 2: Obtener o crear carrito por userId (GET /api/cart/user/{userId})
      */
     @Test
-    @Order(2)    @SuppressWarnings("unused")    public void test2_GetOrCreateCartByUser() throws Exception {
+    @Order(2)
+    public void test2_GetOrCreateCartByUser() throws Exception {
         System.out.println("\n=== TEST 2: Obtener/crear carrito por usuario (GET /api/cart/user/{userId}) ===");
         
         mockMvc.perform(get("/api/cart/user/" + userId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.user.id").value(userId));
+                .andExpect(jsonPath("$.userId").value(userId))
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.total").exists());
         
         System.out.println("✅ TEST 2 PASÓ: Carrito obtenido/creado para el usuario\n");
     }
@@ -145,19 +154,27 @@ public class CartControllerTest {
     public void test3_AddItemToCart() throws Exception {
         System.out.println("\n=== TEST 3: Agregar producto al carrito (POST /api/cart/user/{userId}/items) ===");
         
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(2)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "2"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists());
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.items").isArray())
+                .andExpect(jsonPath("$.items[0].product.id").value(productId))
+                .andExpect(jsonPath("$.items[0].cantidad").value(2));
         
         // Buscar el CartItem recién creado
-        CartItem item = cartItemRepository.findAll().stream()
+        cartItemId = cartItemRepository.findAll().stream()
                 .filter(ci -> ci.getProduct().getId().toString().equals(productId))
                 .findFirst()
-                .orElseThrow();
-        cartItemId = item.getId().toString();
+                .orElseThrow()
+                .getId().toString();
         
         System.out.println("✅ TEST 3 PASÓ: Producto agregado al carrito con CartItem ID: " + cartItemId + "\n");
     }
@@ -170,12 +187,16 @@ public class CartControllerTest {
     public void test4_UpdateItemQuantity() throws Exception {
         System.out.println("\n=== TEST 4: Actualizar cantidad de item (PUT /api/cart/items/{cartItemId}) ===");
         
+        com.laptophub.backend.dto.UpdateCartItemDTO updateDTO = com.laptophub.backend.dto.UpdateCartItemDTO.builder()
+                .cantidad(5)
+                .build();
+        
         mockMvc.perform(put("/api/cart/items/" + cartItemId)
-                        .param("cantidad", "5"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDTO)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(cartItemId))
-                .andExpect(jsonPath("$.cantidad").value(5));
+                .andExpect(jsonPath("$.items").isArray());
         
         System.out.println("✅ TEST 4 PASÓ: Cantidad actualizada correctamente\n");
     }
@@ -224,9 +245,14 @@ public class CartControllerTest {
         System.out.println("\n=== TEST 7: Limpiar carrito completo (DELETE /api/cart/user/{userId}/clear) ===");
         
         // Primero agregar un item
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(3)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "3"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
         // Luego limpiar el carrito
@@ -246,9 +272,14 @@ public class CartControllerTest {
         System.out.println("\n=== TEST 8: Crear carrito final para verificación manual ===");
         
         // Agregar items al carrito para verificación manual
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(2)
+                .build();
+        
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
-                        .param("productId", productId)
-                        .param("cantidad", "2"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists());

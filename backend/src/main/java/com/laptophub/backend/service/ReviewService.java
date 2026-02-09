@@ -1,16 +1,20 @@
 package com.laptophub.backend.service;
 
 
+import com.laptophub.backend.dto.CreateReviewDTO;
+import com.laptophub.backend.dto.DTOMapper;
+import com.laptophub.backend.dto.ReviewResponseDTO;
+import com.laptophub.backend.dto.UpdateReviewDTO;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.Review;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.exception.ConflictException;
 import com.laptophub.backend.exception.ResourceNotFoundException;
-import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,19 +30,11 @@ public class ReviewService {
     private final UserService userService;
     private final ProductService productService;
     
-    private void validateRating(Integer rating) {
-        if (rating < 1 || rating > 5) {
-            throw new ValidationException("El rating debe estar entre 1 y 5");
-        }
-    }
-    
     @Transactional
     @SuppressWarnings("null")
-    public Review createReview(Long productId, UUID userId, Integer rating, String comentario) {
-        validateRating(rating);
-        
+    public ReviewResponseDTO createReview(CreateReviewDTO dto, UUID userId) {
         User user = userService.findById(userId);
-        Product product = productService.findById(productId);
+        Product product = productService.findById(dto.getProductId());
         
         Optional<Review> existingReview = reviewRepository.findByProductAndUser(product, user);
         if (existingReview.isPresent()) {
@@ -48,41 +44,42 @@ public class ReviewService {
         Review review = Review.builder()
                 .product(product)
                 .user(user)
-                .rating(rating)
-                .comentario(comentario)
+                .rating(dto.getRating())
+                .comentario(dto.getComentario())
                 .build();
         
-        return reviewRepository.save(review);
+        Review saved = reviewRepository.save(review);
+        return DTOMapper.toReviewResponse(saved);
     }
     
     @Transactional(readOnly = true)
-    public Page<Review> getReviewsByProduct(Long productId, Pageable pageable) {
+    public Page<ReviewResponseDTO> getReviewsByProduct(Long productId, @NonNull Pageable pageable) {
         Product product = productService.findById(productId);
-        return reviewRepository.findByProduct(product, pageable);
+        return reviewRepository.findByProduct(product, pageable).map(DTOMapper::toReviewResponse);
     }
     
     @Transactional(readOnly = true)
-    public Review getUserReviewForProduct(Long productId, UUID userId) {
+    public ReviewResponseDTO getUserReviewForProduct(Long productId, UUID userId) {
         User user = userService.findById(userId);
         Product product = productService.findById(productId);
         
-        return reviewRepository.findByProductAndUser(product, user)
-                .orElseThrow(() -> new RuntimeException(
+        Review review = reviewRepository.findByProductAndUser(product, user)
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "No se encontró una reseña del usuario para este producto"));
+        return DTOMapper.toReviewResponse(review);
     }
     
     @Transactional
     @SuppressWarnings("null")
-    public Review updateReview(Long reviewId, Integer newRating, String newComentario) {
-        validateRating(newRating);
-        
+    public ReviewResponseDTO updateReview(Long reviewId, UpdateReviewDTO dto) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review no encontrada con id: " + reviewId));
+                .orElseThrow(() -> new ResourceNotFoundException("Review no encontrada con id: " + reviewId));
         
-        review.setRating(newRating);
-        review.setComentario(newComentario);
+        review.setRating(dto.getRating());
+        review.setComentario(dto.getComentario());
         
-        return reviewRepository.save(review);
+        Review saved = reviewRepository.save(review);
+        return DTOMapper.toReviewResponse(saved);
     }
     
     @Transactional

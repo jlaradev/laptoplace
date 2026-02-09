@@ -1,6 +1,10 @@
 package com.laptophub.backend.service;
 
 
+import com.laptophub.backend.dto.DTOMapper;
+import com.laptophub.backend.dto.UserRegisterDTO;
+import com.laptophub.backend.dto.UserResponseDTO;
+import com.laptophub.backend.dto.UserUpdateDTO;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.UserRepository;
 import com.laptophub.backend.exception.ConflictException;
@@ -8,6 +12,7 @@ import com.laptophub.backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,11 +25,14 @@ public class UserService {
     private final UserRepository userRepository;
     
     @Transactional
-    public User registerUser(User user) {
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new ConflictException("El email " + user.getEmail() + " ya está registrado");
+    @SuppressWarnings("null")
+    public UserResponseDTO registerUser(UserRegisterDTO dto) {
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new ConflictException("El email " + dto.getEmail() + " ya está registrado");
         }
-        return userRepository.save(user);
+        User user = DTOMapper.toUser(dto);
+        User saved = userRepository.save(user);
+        return DTOMapper.toUserResponse(saved);
     }
     
     @Transactional(readOnly = true)
@@ -35,25 +43,35 @@ public class UserService {
     }
     
     @Transactional(readOnly = true)
+    public UserResponseDTO findByIdDTO(UUID id) {
+        return DTOMapper.toUserResponse(findById(id));
+    }
+    
+    @Transactional(readOnly = true)
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
     }
     
     @Transactional(readOnly = true)
-    @SuppressWarnings("null")
-    public Page<User> findAll(Pageable pageable) {
-        return userRepository.findAll(pageable);
+    public UserResponseDTO findByEmailDTO(String email) {
+        return DTOMapper.toUserResponse(findByEmail(email));
+    }
+    
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> findAllDTO(@NonNull Pageable pageable) {
+        return userRepository.findAll(pageable).map(DTOMapper::toUserResponse);
     }
     
     @Transactional
     @SuppressWarnings("null")
-    public User updateUser(UUID id, User updatedUser) {
+    public UserResponseDTO updateUser(UUID id, UserUpdateDTO dto) {
         User existingUser = findById(id);
-        if (updatedUser.getNombre() != null) existingUser.setNombre(updatedUser.getNombre());
-        if (updatedUser.getApellido() != null) existingUser.setApellido(updatedUser.getApellido());
-        if (updatedUser.getTelefono() != null) existingUser.setTelefono(updatedUser.getTelefono());
-        if (updatedUser.getDireccion() != null) existingUser.setDireccion(updatedUser.getDireccion());
-        return userRepository.save(existingUser);
+        if (dto.getNombre() != null) existingUser.setNombre(dto.getNombre());
+        if (dto.getApellido() != null) existingUser.setApellido(dto.getApellido());
+        if (dto.getTelefono() != null) existingUser.setTelefono(dto.getTelefono());
+        if (dto.getDireccion() != null) existingUser.setDireccion(dto.getDireccion());
+        User saved = userRepository.save(existingUser);
+        return DTOMapper.toUserResponse(saved);
     }
 }

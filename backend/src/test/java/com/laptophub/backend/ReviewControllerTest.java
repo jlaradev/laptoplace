@@ -1,8 +1,8 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.dto.CreateReviewDTO;
 import com.laptophub.backend.model.Product;
-import com.laptophub.backend.model.Review;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ReviewRepository;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SuppressWarnings("null")
 public class ReviewControllerTest {
 
     @Autowired
@@ -118,21 +120,27 @@ public class ReviewControllerTest {
     public void test2_CreateReview() throws Exception {
         System.out.println("\n=== TEST 2: Crear nueva review (POST /api/reviews) ===");
         
+        CreateReviewDTO reviewDTO = CreateReviewDTO.builder()
+                .productId(Long.parseLong(productId))
+                .rating(5)
+                .comentario("Excelente laptop, superó mis expectativas")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/reviews")
-                        .param("productId", productId)
                         .param("userId", userId)
-                        .param("rating", "5")
-                        .param("comentario", "Excelente laptop, superó mis expectativas"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewDTO)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.rating").value(5))
                 .andExpect(jsonPath("$.comentario").value("Excelente laptop, superó mis expectativas"))
+                .andExpect(jsonPath("$.userNombre").exists())
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Review createdReview = objectMapper.readValue(response, Review.class);
-        reviewId = createdReview.getId().toString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        reviewId = jsonNode.get("id").asText();
         
         System.out.println("✅ TEST 2 PASÓ: Review creada con ID: " + reviewId + "\n");
     }
@@ -185,9 +193,14 @@ public class ReviewControllerTest {
     public void test5_UpdateReview() throws Exception {
         System.out.println("\n=== TEST 5: Actualizar review (PUT /api/reviews/{reviewId}) ===");
         
+        com.laptophub.backend.dto.UpdateReviewDTO updateDTO = com.laptophub.backend.dto.UpdateReviewDTO.builder()
+                .rating(4)
+                .comentario("Muy buena laptop, solo el ventilador es un poco ruidoso")
+                .build();
+        
         mockMvc.perform(put("/api/reviews/" + reviewId)
-                        .param("rating", "4")
-                        .param("comentario", "Muy buena laptop, solo el ventilador es un poco ruidoso"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDTO)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(reviewId))
@@ -236,11 +249,16 @@ public class ReviewControllerTest {
     public void test8_CreateFinalReviewForVerification() throws Exception {
         System.out.println("\n=== TEST 8: Crear review final para verificación manual ===");
         
+        CreateReviewDTO finalReviewDTO = CreateReviewDTO.builder()
+                .productId(Long.parseLong(productId))
+                .rating(5)
+                .comentario("Producto verificado - Review final de prueba")
+                .build();
+        
         MvcResult result = mockMvc.perform(post("/api/reviews")
-                        .param("productId", productId)
                         .param("userId", userId)
-                        .param("rating", "5")
-                        .param("comentario", "Producto verificado - Review final de prueba"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(finalReviewDTO)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
@@ -248,9 +266,9 @@ public class ReviewControllerTest {
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Review createdReview = objectMapper.readValue(response, Review.class);
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
         
-        System.out.println("✅ TEST 8 PASÓ: Review final creada con ID: " + createdReview.getId());
+        System.out.println("✅ TEST 8 PASÓ: Review final creada con ID: " + jsonNode.get("id").asText());
         System.out.println("📋 Verifica en tu gestor de BD:");
         System.out.println("   - Review del usuario: " + UNIQUE_EMAIL);
         System.out.println("   - Review con rating 5 y comentario final\n");

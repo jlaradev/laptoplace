@@ -1,9 +1,13 @@
 package com.laptophub.backend.service;
 
 
+import com.laptophub.backend.dto.CreatePaymentDTO;
+import com.laptophub.backend.dto.DTOMapper;
+import com.laptophub.backend.dto.PaymentResponseDTO;
 import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.PaymentStatus;
+import com.laptophub.backend.repository.OrderRepository;
 import com.laptophub.backend.repository.PaymentRepository;
 import com.laptophub.backend.exception.ResourceNotFoundException;
 import com.laptophub.backend.exception.ValidationException;
@@ -20,6 +24,7 @@ import java.math.BigDecimal;
 public class PaymentService {
     
     private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
     private final StripeService stripeService;
     
     @Transactional
@@ -145,5 +150,62 @@ public class PaymentService {
 
         payment.setEstado(PaymentStatus.FALLIDO);
         return paymentRepository.save(payment);
+    }
+    
+    // Métodos que retornan DTOs
+    
+    @Transactional
+    @SuppressWarnings("null")
+    public PaymentResponseDTO createPaymentDTO(CreatePaymentDTO dto) throws StripeException {
+        Order order = orderRepository.findById(dto.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada con id: " + dto.getOrderId()));
+        Payment payment = createPayment(order, dto.getAmount());
+        return DTOMapper.toPaymentResponse(payment);
+    }
+    
+    @Transactional(readOnly = true)
+    public PaymentResponseDTO findByIdDTO(Long paymentId) {
+        return DTOMapper.toPaymentResponse(findById(paymentId));
+    }
+    
+    @Transactional(readOnly = true)
+    public PaymentResponseDTO findByStripeIdDTO(String stripePaymentId) {
+        return DTOMapper.toPaymentResponse(findByStripePaymentId(stripePaymentId));
+    }
+    
+    @Transactional
+    public PaymentResponseDTO updatePaymentStatusDTO(Long paymentId, PaymentStatus newStatus) {
+        Payment payment = updatePaymentStatus(paymentId, newStatus);
+        return DTOMapper.toPaymentResponse(payment);
+    }
+    
+    @Transactional
+    public PaymentResponseDTO setStripePaymentIdDTO(Long paymentId, String stripePaymentId) {
+        Payment payment = setStripePaymentId(paymentId, stripePaymentId);
+        return DTOMapper.toPaymentResponse(payment);
+    }
+    
+    @Transactional
+    public PaymentResponseDTO processPaymentSimulatedDTO(Long paymentId, boolean success) {
+        Payment payment = processPaymentSimulated(paymentId, success);
+        return DTOMapper.toPaymentResponse(payment);
+    }
+    
+    @Transactional
+    public PaymentResponseDTO processStripePaymentDTO(Long paymentId) throws StripeException {
+        Payment payment = processStripePayment(paymentId);
+        return DTOMapper.toPaymentResponse(payment);
+    }
+    
+    @Transactional
+    public PaymentResponseDTO checkAndSyncPaymentStatusDTO(Long paymentId) throws StripeException {
+        Payment payment = checkAndSyncPaymentStatus(paymentId);
+        return DTOMapper.toPaymentResponse(payment);
+    }
+    
+    @Transactional
+    public PaymentResponseDTO cancelPaymentDTO(Long paymentId) throws StripeException {
+        Payment payment = cancelPayment(paymentId);
+        return DTOMapper.toPaymentResponse(payment);
     }
 }
