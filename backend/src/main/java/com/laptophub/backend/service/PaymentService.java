@@ -30,6 +30,19 @@ public class PaymentService {
     @Transactional
     @SuppressWarnings("null")
     public Payment createPayment(Order order, BigDecimal amount) throws StripeException {
+        if (order.getPayment() != null) {
+            throw new ValidationException("La orden ya tiene un pago asociado");
+        }
+        if (order.getTotal() == null) {
+            throw new ValidationException("La orden no tiene total");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ValidationException("El monto debe ser mayor a 0");
+        }
+        if (amount.compareTo(order.getTotal()) != 0) {
+            throw new ValidationException("El monto no coincide con el total de la orden");
+        }
+
         Payment payment = Payment.builder()
                 .order(order)
                 .monto(amount)
@@ -159,7 +172,14 @@ public class PaymentService {
     public PaymentResponseDTO createPaymentDTO(CreatePaymentDTO dto) throws StripeException {
         Order order = orderRepository.findById(dto.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Orden no encontrada con id: " + dto.getOrderId()));
-        Payment payment = createPayment(order, dto.getAmount());
+        BigDecimal orderTotal = order.getTotal();
+        if (orderTotal == null) {
+            throw new ValidationException("La orden no tiene total");
+        }
+        if (dto.getAmount() != null && orderTotal.compareTo(dto.getAmount()) != 0) {
+            throw new ValidationException("El monto no coincide con el total de la orden");
+        }
+        Payment payment = createPayment(order, orderTotal);
         return DTOMapper.toPaymentResponse(payment);
     }
     

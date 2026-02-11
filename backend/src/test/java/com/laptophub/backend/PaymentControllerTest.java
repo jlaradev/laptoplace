@@ -3,6 +3,9 @@ package com.laptophub.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.dto.CreateOrderDTO;
+import com.laptophub.backend.dto.CreatePaymentDTO;
+import com.laptophub.backend.model.Order;
+import com.laptophub.backend.model.OrderStatus;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
@@ -27,7 +30,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -92,7 +97,6 @@ public class PaymentControllerTest {
      */
     @Test
     @org.junit.jupiter.api.Order(1)
-    @SuppressWarnings("null")
     public void test1_SetupUserProductAndOrder() throws Exception {
         // Limpiar BD solo antes del primer test
         orderItemRepository.deleteAll();
@@ -392,5 +396,43 @@ public class PaymentControllerTest {
         
         System.out.println("✅ TEST 8 PASÓ: Payment final creado con ID: " + finalPayment.getId());
         System.out.println("📋 Verifica en tu gestor de BD los payments del usuario: payment.test@laptophub.com\n");
+    }
+
+    /**
+     * TEST 9: Rechazar pago con monto distinto al total de la orden
+     */
+    @Test
+    @org.junit.jupiter.api.Order(9)
+    public void test9_RejectPaymentWithMismatchedAmount() throws Exception {
+        System.out.println("\n=== TEST 9: Rechazar pago con monto distinto al total ===");
+
+        UUID userUuid = UUID.fromString(userId);
+        User user = userRepository.findById(userUuid).orElseThrow();
+
+        Order order = Order.builder()
+                .user(user)
+                .estado(OrderStatus.PENDIENTE)
+                .total(new BigDecimal("100.00"))
+                .direccionEnvio("Calle Mismatch 999")
+                .build();
+        Order savedOrder = orderRepository.save(order);
+
+        CreatePaymentDTO dto = CreatePaymentDTO.builder()
+                .orderId(savedOrder.getId())
+                .amount(new BigDecimal("99.00"))
+                .build();
+
+        mockMvc.perform(post("/api/payments/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("El monto no coincide con el total de la orden"));
+
+        boolean hasPayment = paymentRepository.findAll().stream()
+                .anyMatch(p -> p.getOrder().getId().equals(savedOrder.getId()));
+        assertFalse(hasPayment, "No se debe crear el pago si el monto no coincide");
+
+        System.out.println("✅ TEST 9 PASÓ: Monto inconsistente rechazado correctamente\n");
     }
 }

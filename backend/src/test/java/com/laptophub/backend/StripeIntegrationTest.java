@@ -64,7 +64,7 @@ public class StripeIntegrationTest {
     @Test
     public void testCreatePaymentIntentSuccessfully() throws StripeException {
         // Arrange
-        BigDecimal amount = BigDecimal.valueOf(99.99);
+        BigDecimal amount = testOrder.getTotal();
 
         // Act
         Payment payment = paymentService.createPayment(testOrder, amount);
@@ -81,7 +81,7 @@ public class StripeIntegrationTest {
     @Test
     public void testPaymentPersistence() throws StripeException {
         // Arrange
-        BigDecimal amount = BigDecimal.valueOf(49.99);
+        BigDecimal amount = testOrder.getTotal();
 
         // Act
         Payment createdPayment = paymentService.createPayment(testOrder, amount);
@@ -97,7 +97,7 @@ public class StripeIntegrationTest {
     @Test
     public void testFindPaymentByStripeId() throws StripeException {
         // Arrange
-        BigDecimal amount = BigDecimal.valueOf(29.99);
+        BigDecimal amount = testOrder.getTotal();
         Payment createdPayment = paymentService.createPayment(testOrder, amount);
 
         // Act
@@ -111,7 +111,7 @@ public class StripeIntegrationTest {
     @Test
     public void testUpdatePaymentStatus() throws StripeException {
         // Arrange
-        BigDecimal amount = BigDecimal.valueOf(59.99);
+        BigDecimal amount = testOrder.getTotal();
         Payment payment = paymentService.createPayment(testOrder, amount);
 
         // Act
@@ -125,7 +125,7 @@ public class StripeIntegrationTest {
     @Test
     public void testSimulatedPaymentProcessing() throws StripeException {
         // Arrange
-        BigDecimal amount = BigDecimal.valueOf(79.99);
+        BigDecimal amount = testOrder.getTotal();
         Payment payment = paymentService.createPayment(testOrder, amount);
 
         // Act - Simulate payment success
@@ -141,14 +141,14 @@ public class StripeIntegrationTest {
                 .user(testUser)
                 .estado(OrderStatus.PENDIENTE)
                 .createdAt(LocalDateTime.now())
-                .total(BigDecimal.valueOf(79.99))
+            .total(BigDecimal.valueOf(79.99))
                 .direccionEnvio("Calle Test 456, Test City 67890")
                 .build();
         @SuppressWarnings("null")
         Order savedTestOrder2 = orderRepository.save(testOrder2);
         testOrder2 = savedTestOrder2;
         
-        Payment payment2 = paymentService.createPayment(testOrder2, amount);
+        Payment payment2 = paymentService.createPayment(testOrder2, testOrder2.getTotal());
         Payment failurePayment = paymentService.processPaymentSimulated(payment2.getId(), false);
 
         // Assert failure
@@ -158,7 +158,7 @@ public class StripeIntegrationTest {
     @Test
     public void testPaymentAmountConversion() throws StripeException {
         // Arrange - Test que el monto se convierte correctamente a centavos
-        BigDecimal amount = BigDecimal.valueOf(100.50);
+        BigDecimal amount = testOrder.getTotal();
 
         // Act
         Payment payment = paymentService.createPayment(testOrder, amount);
