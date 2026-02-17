@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Health Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <h1>Health test</h1>
+    <div id="status">Loading...</div>
+    <pre id="output"></pre>
+
+    <script src="/config.js"></script>
+    <script>
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+      const config = window.APP_CONFIG || {};
+      const baseUrl = config.apiBaseUrl;
+
+      if (!baseUrl) {
+        statusEl.textContent = 'Error';
+        outputEl.textContent = 'Missing apiBaseUrl in /config.js';
+      } else {
+        fetch(`${baseUrl}/health`)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Request failed: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            statusEl.textContent = 'OK';
+            outputEl.textContent = JSON.stringify(data, null, 2);
+          })
+          .catch((error) => {
+            statusEl.textContent = 'Error';
+            outputEl.textContent = error && error.message ? error.message : 'Request failed';
+          });
+      }
+    </script>
+  </body>
+</html>
