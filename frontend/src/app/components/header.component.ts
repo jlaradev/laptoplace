@@ -12,8 +12,8 @@ import { AuthService } from '../services/auth.service';
       <div class="max-w-[1440px] mx-auto px-4 md:px-6 py-5 flex items-center justify-between">
         <a href="/" class="flex items-center text-xl font-bold text-slate-900">Lapto<span class="text-blue-600">Place</span></a>
         <nav class="hidden md:flex gap-8 text-sm font-semibold text-slate-700">
-          <a href="#" class="hover:text-blue-600 transition">Catalogo</a>
-          <a href="#" class="hover:text-blue-600 transition">Soporte</a>
+          <a routerLink="/catalog" class="hover:text-blue-600 transition">Catalogo</a>
+          <a routerLink="/compare" class="hover:text-blue-600 transition">Comparar equipos</a>
         </nav>
         <div class="flex gap-3 items-center">
           <span *ngIf="isLoggedIn && userEmail" class="text-blue-700 font-bold text-base mr-2">BIENVENIDO, {{ userEmail }}</span>

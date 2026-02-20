@@ -6,11 +6,12 @@ import { AuthService } from './services/auth.service';
 
 import { Product } from './models/product.model';
 import { HeaderComponent } from './components/header.component';
+import { ProductCardComponent } from './components/product-card.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent],
+  imports: [CommonModule, RouterLink, HeaderComponent, ProductCardComponent],
   templateUrl: './app.html'
 })
 export class App implements OnInit {

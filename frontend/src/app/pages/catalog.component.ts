@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { HeaderComponent } from '../components/header.component';
+import { FooterComponent } from '../components/footer.component';
+import { ProductCardComponent } from '../components/product-card.component';
 import { ProductService } from '../services/product.service';
 import { AuthService } from '../services/auth.service';
 import { Product } from '../models/product.model';
@@ -11,7 +13,7 @@ import { Product } from '../models/product.model';
 @Component({
   selector: 'app-catalog',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent],
+  imports: [CommonModule, FormsModule, HeaderComponent, FooterComponent, ProductCardComponent],
   template: `
     <div class="flex flex-col min-h-screen h-screen bg-white">
       <!-- Header -->
@@ -19,11 +21,15 @@ import { Product } from '../models/product.model';
 
       <main class="flex-1 flex bg-white">
         <!-- Sidebar -->
-        <aside class="w-64 border-r border-slate-200 p-6">
+        <aside class="w-80 border-r border-slate-200 p-8">
           <label class="block text-sm font-semibold mb-2">Buscar producto</label>
           <form (ngSubmit)="onSearch()" class="flex gap-2 mb-4">
             <input type="text" [(ngModel)]="search" name="search" placeholder="Buscar..." class="w-full px-3 py-2 border rounded-lg" />
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">Buscar</button>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center" aria-label="Buscar">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
+              </svg>
+            </button>
           </form>
           <button (click)="clearFilters()" class="mb-6 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition w-full">Limpiar filtros</button>
           <h2 class="text-lg font-bold mb-4">Filtrar por marca</h2>
@@ -35,7 +41,7 @@ import { Product } from '../models/product.model';
           </div>
         </aside>
         <!-- Main Content -->
-        <section class="flex-1 p-8 min-h-screen">
+        <section class="flex-1 p-6 min-h-screen">
           <!-- Saludo movido al header -->
           <h1 class="text-2xl font-bold mb-6">Catálogo completo</h1>
           <!-- Loader centrado solo si no hay productos -->
@@ -44,13 +50,8 @@ import { Product } from '../models/product.model';
             <span class="text-blue-700 font-semibold text-lg">Cargando productos...</span>
           </div>
           <ng-container *ngIf="filteredProducts().length > 0">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              <div *ngFor="let product of filteredProducts()" class="border rounded-lg p-4 shadow-sm">
-                <img [src]="product.imagenPrincipal?.url" alt="{{ product.nombre }}" class="w-full h-40 object-contain mb-3" />
-                <h3 class="font-semibold text-lg mb-1">{{ product.nombre }}</h3>
-                <p class="text-slate-600 mb-2">{{ product.marca }}</p>
-                <p class="font-bold text-blue-600 text-xl">$ {{ product.precio }}</p>
-              </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <app-product-card *ngFor="let product of filteredProducts()" [product]="product"></app-product-card>
             </div>
             <!-- Loader pequeño debajo de productos al paginar -->
             <div *ngIf="loading() && filteredProducts().length > 0" class="flex flex-col items-center justify-center w-full min-h-20 my-8">
@@ -66,13 +67,7 @@ import { Product } from '../models/product.model';
         </section>
       </main>
 
-      <!-- Footer -->
-      <footer class="border-t border-slate-200 mt-20 py-8">
-        <div class="max-w-[1440px] mx-auto px-4 md:px-6 flex flex-wrap justify-between items-center gap-4 text-sm text-slate-600">
-          <span>2026 LaptoPlace. Todos los derechos reservados.</span>
-          <span class="text-slate-700 font-medium">Soporte 24/7 en soporte@laptoplace.com</span>
-        </div>
-      </footer>
+      <app-footer></app-footer>
     <!-- Div invisible para forzar scroll solo en catálogo -->
     </div>
   `,

@@ -2,12 +2,13 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
+import { FooterComponent } from '../components/footer.component';
 import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, FooterComponent],
   template: `
     <div class="flex flex-col min-h-screen bg-white">
       <!-- Header -->
@@ -81,13 +82,7 @@ import { AuthService } from '../services/auth.service';
         </div>
       </main>
 
-      <!-- Footer -->
-      <footer class="border-t border-slate-200 mt-20 py-8">
-        <div class="max-w-[1440px] mx-auto px-4 md:px-6 flex flex-wrap justify-between items-center gap-4 text-sm text-slate-600">
-          <span>2026 LaptoPlace. Todos los derechos reservados.</span>
-          <span class="text-slate-700 font-medium">Soporte 24/7 en soporte@laptoplace.com</span>
-        </div>
-      </footer>
+      <app-footer></app-footer>
     </div>
   `,
   styles: []
