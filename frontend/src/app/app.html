@@ -1,22 +1,6 @@
 <div class="flex flex-col min-h-screen bg-white">
   <!-- Header -->
-  <header class="border-b border-slate-200 sticky top-0 bg-white z-40">
-    <div class="max-w-[1440px] mx-auto px-4 md:px-6 py-5 flex items-center justify-between">
-      <a href="/" class="flex items-center text-xl font-bold text-slate-900">Lapto<span class="text-blue-600">Place</span></a>
-      <nav class="hidden md:flex gap-8 text-sm font-semibold text-slate-700">
-        <a href="#" class="hover:text-blue-600 transition">Catalogo</a>
-        <a href="#" class="hover:text-blue-600 transition">Soporte</a>
-      </nav>
-      <div class="flex gap-3">
-        <a *ngIf="!isLoggedIn()" routerLink="/login" class="px-5 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 transition cursor-pointer">
-          Iniciar sesion
-        </a>
-        <button *ngIf="isLoggedIn()" (click)="logout()" class="px-5 py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition">
-          Cerrar sesion
-        </button>
-      </div>
-    </div>
-  </header>
+  <app-header></app-header>
 
   <!-- Main Content -->
   <main class="flex-1">
@@ -36,6 +20,9 @@
           <button class="px-6 py-3 font-semibold text-white bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition">
             Explorar modelos
           </button>
+          <a routerLink="/catalog" class="px-6 py-3 font-semibold text-blue-700 bg-blue-50 rounded-full hover:bg-blue-100 transition flex items-center">
+            Ver catálogo completo
+          </a>
           <button class="px-6 py-3 font-semibold text-blue-700 bg-blue-50 rounded-full hover:bg-blue-100 transition">
             Comparar specs
           </button>
@@ -53,62 +40,62 @@
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'ASUS' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/asus.png" alt="ASUS" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'Lenovo' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/lenovo.png" alt="Lenovo" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'Acer' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/acer.png" alt="Acer" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'MSI' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/msi.png" alt="MSI" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'Dell' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/dell.png" alt="Dell" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'HP' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/hp.png" alt="HP" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'Samsung' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/samsung.png" alt="Samsung" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
-        <button class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition">
+        </a>
+        <a class="group border border-slate-200 rounded-2xl p-3 bg-white hover:shadow-md transition" routerLink="/catalog" [queryParams]="{ brand: 'Apple' }">
           <div class="h-32 flex items-center justify-center bg-slate-50 rounded-xl">
             <div class="w-48 h-24 flex items-center justify-center">
               <img src="/brands/apple.png" alt="Apple" class="max-w-full max-h-full object-contain" />
             </div>
           </div>
-        </button>
+        </a>
       </div>
     </section>
 
