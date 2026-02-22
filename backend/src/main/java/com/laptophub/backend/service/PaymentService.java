@@ -180,7 +180,15 @@ public class PaymentService {
             throw new ValidationException("El monto no coincide con el total de la orden");
         }
         Payment payment = createPayment(order, orderTotal);
-        return DTOMapper.toPaymentResponse(payment);
+        // Obtener clientSecret del PaymentIntent
+        String clientSecret = null;
+        if (payment.getStripePaymentId() != null) {
+            com.stripe.model.PaymentIntent paymentIntent = stripeService.retrievePaymentIntent(payment.getStripePaymentId());
+            clientSecret = paymentIntent.getClientSecret();
+        }
+        PaymentResponseDTO dtoResp = DTOMapper.toPaymentResponse(payment);
+        dtoResp.setClientSecret(clientSecret);
+        return dtoResp;
     }
     
     @Transactional(readOnly = true)

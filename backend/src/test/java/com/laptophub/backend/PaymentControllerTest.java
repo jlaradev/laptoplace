@@ -49,6 +49,47 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SuppressWarnings("null")
 public class PaymentControllerTest {
+    /**
+     * TEST 1.1: Verificar que se devuelve clientSecret al crear Payment
+     * Se ejecuta después del setup, usando el usuario y token global
+     */
+    @Test
+    @org.junit.jupiter.api.Order(2)
+    public void test1_1_CreatePaymentReturnsClientSecret() throws Exception {
+        System.out.println("\n=== TEST 1.1: Verificar clientSecret en /api/payments/create ===");
+
+        // Usar usuario y token global ya inicializados
+        User user = userRepository.findById(UUID.fromString(userId)).orElseThrow();
+
+        Order order = Order.builder()
+                .user(user)
+                .estado(OrderStatus.PENDIENTE)
+                .total(new BigDecimal("100.00"))
+                .direccionEnvio("Calle Stripe 123")
+                .build();
+        order = orderRepository.save(order);
+
+        CreatePaymentDTO dto = CreatePaymentDTO.builder()
+                .orderId(order.getId())
+                .amount(new BigDecimal("100.00"))
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/payments/create")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientSecret").exists())
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        String clientSecret = jsonNode.get("clientSecret").asText();
+        System.out.println("clientSecret devuelto: " + clientSecret);
+        org.junit.jupiter.api.Assertions.assertNotNull(clientSecret);
+        org.junit.jupiter.api.Assertions.assertFalse(clientSecret.isEmpty());
+        System.out.println("✅ TEST 1.1 PASÓ: clientSecret devuelto correctamente\n");
+    }
 
     @Autowired
     private MockMvc mockMvc;

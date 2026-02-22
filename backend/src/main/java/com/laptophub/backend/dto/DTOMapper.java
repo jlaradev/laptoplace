@@ -159,6 +159,7 @@ public class DTOMapper {
                 .id(payment.getId())
                 .orderId(payment.getOrder().getId())
                 .stripePaymentId(payment.getStripePaymentId())
+                .clientSecret(null) // Se setea en PaymentService
                 .monto(payment.getMonto())
                 .estado(payment.getEstado())
                 .createdAt(payment.getCreatedAt())

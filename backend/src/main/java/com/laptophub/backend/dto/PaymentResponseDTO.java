@@ -17,6 +17,7 @@ public class PaymentResponseDTO {
     private Long id;
     private Long orderId;
     private String stripePaymentId;
+    private String clientSecret;
     private BigDecimal monto;
     private PaymentStatus estado;
     private LocalDateTime createdAt;
