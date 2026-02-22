@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { take } from 'rxjs/operators';
 import { timeout, catchError } from 'rxjs/operators';
@@ -57,6 +58,15 @@ import { FormsModule } from '@angular/forms';
               </div>
               <div class="text-right font-semibold mt-4">Total: $ {{ total }}</div>
             </div>
+              <div class="text-right mt-6">
+                <button
+                  class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition"
+                  [disabled]="loading || items.length === 0"
+                  (click)="goToPayment()"
+                >
+                  Pagar
+                </button>
+              </div>
           </div>
           <div *ngIf="loading && firstLoad" class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="text-center text-slate-600 bg-white/70 px-4 py-2 rounded">Cargando...</div>
@@ -75,6 +85,24 @@ export class CartPageComponent implements OnInit {
   firstLoad = true;
   private cartService = inject(CartService);
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router) as Router;
+    /**
+     * Navega a la pantalla de pago, pasando el total y los productos del carrito como state.
+     */
+    goToPayment() {
+      // Se pasa el total y los productos (id, cantidad, precio, nombre) como state
+      const cartData = {
+        total: this.total,
+        items: this.items.map(item => ({
+          id: item.id,
+          cantidad: item.cantidad,
+          precio: item.product?.precio ?? item.precio,
+          nombre: item.product?.nombre ?? '',
+          imagenUrl: item.product?.imagenUrl ?? '',
+        }))
+      };
+      this.router.navigate(['/payment'], { state: cartData });
+    }
   // Debounce timers per item to batch rapid quantity changes
   private pendingTimers = new Map<number, any>();
   // Track last requested quantity per item to help ignore out-of-order responses

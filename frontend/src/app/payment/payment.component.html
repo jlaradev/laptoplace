@@ -1,0 +1,37 @@
+<div *ngIf="loading">Procesando pago...</div>
+<div *ngIf="error" style="color:red;">{{ error }}</div>
+
+<div *ngIf="items.length > 0">
+  <h2>Resumen del pedido</h2>
+  <ul>
+    <li *ngFor="let item of items">
+      <img *ngIf="item.imagenUrl" [src]="item.imagenUrl" width="40" height="40"
+        style="vertical-align:middle;margin-right:8px;" />
+      {{ item.nombre }} x {{ item.cantidad }} — ${{ item.precio }}
+    </li>
+  </ul>
+  <div class="font-bold mt-2">Total: ${{ total }}</div>
+
+  <!-- Siempre presente en el DOM para que ViewChild lo encuentre -->
+  <div #paymentForm id="payment-form"></div>
+
+  <button
+    class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-4"
+    id="iniciar-pago-btn"
+    type="button"
+    [disabled]="loading"
+    (click)="iniciarPago()"
+    *ngIf="!clientSecret"
+  >
+    Iniciar pago
+  </button>
+
+  <button
+    class="px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition mt-4"
+    [disabled]="loading"
+    (click)="confirmarPago()"
+    *ngIf="clientSecret"
+  >
+    Confirmar pago
+  </button>
+</div>
