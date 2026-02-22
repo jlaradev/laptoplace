@@ -42,6 +42,42 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @SuppressWarnings("null")
 public class OrderControllerTest {
+    /**
+     * TEST 11: Validar que el payment de la orden creada incluye clientSecret
+     */
+    @Test
+    @org.junit.jupiter.api.Order(11)
+    public void test11_OrderPaymentHasClientSecret() throws Exception {
+        System.out.println("\n=== TEST 11: Validar clientSecret en payment de orden creada ===");
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(Long.parseLong(productId))
+                .cantidad(1)
+                .build();
+        mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
+                .andExpect(status().isOk());
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Test Secret")
+                .build();
+        MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.payment").exists())
+                .andReturn();
+        String response = result.getResponse().getContentAsString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        com.fasterxml.jackson.databind.JsonNode paymentNode = jsonNode.get("payment");
+        String clientSecret = paymentNode != null && paymentNode.has("clientSecret") ? paymentNode.get("clientSecret").asText() : null;
+        System.out.println("clientSecret devuelto en payment: " + clientSecret);
+        org.junit.jupiter.api.Assertions.assertNotNull(clientSecret);
+        org.junit.jupiter.api.Assertions.assertFalse(clientSecret.isEmpty());
+        System.out.println("✅ TEST 11 PASÓ: clientSecret devuelto correctamente en payment de orden\n");
+    }
 
     @Autowired
     private MockMvc mockMvc;

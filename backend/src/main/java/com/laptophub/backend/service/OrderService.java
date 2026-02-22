@@ -238,11 +238,15 @@ public class OrderService {
         List<OrderItemResponseDTO> items = order.getOrderItems().stream()
                 .map(this::mapOrderItemToDTO)
                 .collect(Collectors.toList());
-        
-        PaymentResponseDTO payment = order.getPayment() != null 
-                ? DTOMapper.toPaymentResponse(order.getPayment()) 
-                : null;
-        
+
+        PaymentResponseDTO payment = null;
+        if (order.getPayment() != null) {
+            payment = DTOMapper.toPaymentResponse(order.getPayment());
+            if (order.getPayment().getStripePaymentId() != null) {
+                String clientSecret = paymentService.getClientSecret(order.getPayment().getStripePaymentId());
+                payment.setClientSecret(clientSecret);
+            }
+        }
         return DTOMapper.toOrderResponse(order, items, payment);
     }
     

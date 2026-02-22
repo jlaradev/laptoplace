@@ -22,6 +22,15 @@ import java.math.BigDecimal;
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
+        public String getClientSecret(String stripePaymentId) {
+            try {
+                com.stripe.model.PaymentIntent paymentIntent = stripeService.retrievePaymentIntent(stripePaymentId);
+                return paymentIntent.getClientSecret();
+            } catch (Exception e) {
+                System.err.println("[PaymentService] Error obteniendo clientSecret: " + e.getMessage());
+                return null;
+            }
+        }
     
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
