@@ -3,9 +3,6 @@ package com.laptophub.backend.controller;
 import com.laptophub.backend.model.*;
 import com.laptophub.backend.repository.OrderRepository;
 import com.laptophub.backend.repository.PaymentRepository;
-import com.stripe.model.Event;
-import com.stripe.model.EventDataObjectDeserializer;
-import com.stripe.model.PaymentIntent;
 import com.stripe.net.Webhook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +16,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.stripe.model.Event;
 
 import java.util.Optional;
 
@@ -55,6 +53,42 @@ public class StripeWebhookControllerTest {
     private Payment payment;
     private Order order;
 
+    private static final String PAYLOAD_SUCCEEDED = "{"
+        + "\"id\":\"evt_3T3qMTKui0hnNmHH1E52Kpwz\","
+        + "\"object\":\"event\","
+        + "\"api_version\":\"2026-01-28.clover\","
+        + "\"created\":1771819397,"
+        + "\"data\":{"
+        +   "\"object\":{"
+        +     "\"id\":\"pi_test\","
+        +     "\"object\":\"payment_intent\","
+        +     "\"amount\":159999,"
+        +     "\"status\":\"succeeded\","
+        +     "\"metadata\":{\"orderId\":\"1\"}"
+        +   "}"
+        + "},"
+        + "\"livemode\":false,"
+        + "\"type\":\"payment_intent.succeeded\""
+        + "}";
+
+    private static final String PAYLOAD_FAILED = "{"
+        + "\"id\":\"evt_failed123\","
+        + "\"object\":\"event\","
+        + "\"api_version\":\"2026-01-28.clover\","
+        + "\"created\":1771819397,"
+        + "\"data\":{"
+        +   "\"object\":{"
+        +     "\"id\":\"pi_test\","
+        +     "\"object\":\"payment_intent\","
+        +     "\"amount\":159999,"
+        +     "\"status\":\"requires_payment_method\","
+        +     "\"metadata\":{\"orderId\":\"1\"}"
+        +   "}"
+        + "},"
+        + "\"livemode\":false,"
+        + "\"type\":\"payment_intent.payment_failed\""
+        + "}";
+
     @BeforeEach
     public void setUp() {
         order = new Order();
@@ -68,24 +102,15 @@ public class StripeWebhookControllerTest {
 
     @Test
     public void testWebhookPaymentIntentSucceeded() throws Exception {
-        String payload = "{\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test\"}}}";
-
         try (MockedStatic<Webhook> webhookMock = mockStatic(Webhook.class)) {
-            PaymentIntent mockPaymentIntent = mock(PaymentIntent.class);
-            when(mockPaymentIntent.getId()).thenReturn("pi_test");
-
-            EventDataObjectDeserializer mockDeserializer = mock(EventDataObjectDeserializer.class);
-            when(mockDeserializer.getObject()).thenReturn(Optional.of(mockPaymentIntent));
-
             Event mockEvent = mock(Event.class);
             when(mockEvent.getType()).thenReturn("payment_intent.succeeded");
-            when(mockEvent.getDataObjectDeserializer()).thenReturn(mockDeserializer);
 
             webhookMock.when(() -> Webhook.constructEvent(anyString(), anyString(), anyString()))
                     .thenReturn(mockEvent);
 
             mockMvc.perform(post("/api/stripe/webhook")
-                    .content(payload)
+                    .content(PAYLOAD_SUCCEEDED)
                     .contentType("application/json")
                     .header("Stripe-Signature", "test_signature"))
                     .andExpect(status().isOk());
@@ -94,24 +119,15 @@ public class StripeWebhookControllerTest {
 
     @Test
     public void testWebhookPaymentIntentFailed() throws Exception {
-        String payload = "{\"type\":\"payment_intent.payment_failed\",\"data\":{\"object\":{\"id\":\"pi_test\"}}}";
-
         try (MockedStatic<Webhook> webhookMock = mockStatic(Webhook.class)) {
-            PaymentIntent mockPaymentIntent = mock(PaymentIntent.class);
-            when(mockPaymentIntent.getId()).thenReturn("pi_test");
-
-            EventDataObjectDeserializer mockDeserializer = mock(EventDataObjectDeserializer.class);
-            when(mockDeserializer.getObject()).thenReturn(Optional.of(mockPaymentIntent));
-
             Event mockEvent = mock(Event.class);
             when(mockEvent.getType()).thenReturn("payment_intent.payment_failed");
-            when(mockEvent.getDataObjectDeserializer()).thenReturn(mockDeserializer);
 
             webhookMock.when(() -> Webhook.constructEvent(anyString(), anyString(), anyString()))
                     .thenReturn(mockEvent);
 
             mockMvc.perform(post("/api/stripe/webhook")
-                    .content(payload)
+                    .content(PAYLOAD_FAILED)
                     .contentType("application/json")
                     .header("Stripe-Signature", "test_signature"))
                     .andExpect(status().isOk());
