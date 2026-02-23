@@ -3,6 +3,8 @@ import { PaymentService, PaymentResponseDTO } from './payment.service';
 import { OrderService } from '../services/order.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { HeaderComponent } from '../components/header.component';
+import { FooterComponent } from '../components/footer.component';
 
 declare var Stripe: any;
 const STRIPE_PUBLISHABLE_KEY = (window as any).APP_CONFIG?.stripePublishableKey;
@@ -12,7 +14,7 @@ const STRIPE_PUBLISHABLE_KEY = (window as any).APP_CONFIG?.stripePublishableKey;
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.css'],
   standalone: true,
-  imports: [CommonModule]
+  imports: [CommonModule, HeaderComponent, FooterComponent],
 })
 export class PaymentComponent implements OnInit {
   clientSecret: string | null = null;
@@ -44,6 +46,7 @@ export class PaymentComponent implements OnInit {
       this.total = parseFloat(state.total);
       this.items = state.items;
       console.log('[Payment] loaded cart data', { total: this.total, items: this.items });
+      this.iniciarPago();
     } else {
       this.error = 'No hay datos del carrito. Regresa y selecciona productos.';
       console.warn('[Payment] no cart data in history.state');
@@ -121,6 +124,9 @@ export class PaymentComponent implements OnInit {
     }
   }
 
+  mostrarOverlayError = false;
+  mostrarOverlayAprobada = false;
+
   async confirmarPago() {
     console.log('[Payment] confirmarPago invoked');
     if (!this.stripe || !this.clientSecret) {
@@ -131,25 +137,52 @@ export class PaymentComponent implements OnInit {
       return;
     }
     this.loading = true;
+    this.error = null;
     try {
       const result = await this.stripe.confirmPayment({
         elements: this.elements,
-        confirmParams: { return_url: window.location.href }
+        confirmParams: {
+          return_url: window.location.href
+        },
+        redirect: 'if_required'
       });
       console.log('[Payment] confirmPayment result', result);
       this.loading = false;
       if (result.error) {
-        this.error = result.error.message;
+        setTimeout(() => {
+          this.mostrarOverlayError = true;
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.router.navigate(['/cart']);
+          }, 5000);
+        }, 3000);
       } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
-        this.error = null;
-        alert('Pago exitoso!');
+        setTimeout(() => {
+          this.mostrarOverlayAprobada = true;
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.router.navigate(['/cart']);
+          }, 2500);
+        }, 300);
       } else {
-        this.error = 'Pago no completado.';
+        setTimeout(() => {
+          this.mostrarOverlayError = true;
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.router.navigate(['/cart']);
+          }, 5000);
+        }, 3000);
       }
     } catch (e: any) {
       console.error('[Payment] confirmarPago exception', e);
       this.loading = false;
-      this.error = e?.message ?? 'Error inesperado';
+      setTimeout(() => {
+        this.mostrarOverlayError = true;
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.router.navigate(['/cart']);
+        }, 5000);
+      }, 3000);
     }
   }
 }

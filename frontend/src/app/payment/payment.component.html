@@ -1,37 +1,45 @@
-<div *ngIf="loading">Procesando pago...</div>
-<div *ngIf="error" style="color:red;">{{ error }}</div>
-
-<div *ngIf="items.length > 0">
-  <h2>Resumen del pedido</h2>
-  <ul>
-    <li *ngFor="let item of items">
-      <img *ngIf="item.imagenUrl" [src]="item.imagenUrl" width="40" height="40"
-        style="vertical-align:middle;margin-right:8px;" />
-      {{ item.nombre }} x {{ item.cantidad }} — ${{ item.precio }}
-    </li>
-  </ul>
-  <div class="font-bold mt-2">Total: ${{ total }}</div>
-
-  <!-- Siempre presente en el DOM para que ViewChild lo encuentre -->
-  <div #paymentForm id="payment-form"></div>
-
-  <button
-    class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-4"
-    id="iniciar-pago-btn"
-    type="button"
-    [disabled]="loading"
-    (click)="iniciarPago()"
-    *ngIf="!clientSecret"
-  >
-    Iniciar pago
-  </button>
-
-  <button
-    class="px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition mt-4"
-    [disabled]="loading"
-    (click)="confirmarPago()"
-    *ngIf="clientSecret"
-  >
-    Confirmar pago
-  </button>
+<app-header></app-header>
+<div class="payment-bg">
+  <div *ngIf="mostrarOverlayError" class="payment-overlay-error">
+    <div class="payment-overlay-content">
+      <span class="payment-overlay-icon">&#9888;</span>
+      <h2>Transacción rechazada</h2>
+      <p>Serás redirigido al carrito...</p>
+    </div>
+  </div>
+  <div *ngIf="mostrarOverlayAprobada" class="payment-overlay-success">
+    <div class="payment-overlay-content">
+      <span class="payment-overlay-icon">&#10004;</span>
+      <h2>Transacción aprobada</h2>
+      <p>Serás redirigido al carrito...</p>
+    </div>
+  </div>
+  <div class="payment-flex-container" [class.blur-sm]="mostrarOverlayError">
+    <div class="payment-flex-left">
+      <div *ngIf="error" class="payment-error">{{ error }}</div>
+      <div #paymentForm id="payment-form"></div>
+    </div>
+    <div class="payment-flex-right-wrapper">
+      <div class="payment-flex-right" *ngIf="items.length > 0">
+        <h2 class="payment-summary-title">Resumen del pedido</h2>
+        <ul>
+          <li *ngFor="let item of items">
+            <img *ngIf="item.imagenUrl" [src]="item.imagenUrl" width="40" height="40"
+              style="vertical-align:middle;margin-right:8px;" />
+            {{ item.nombre }} x {{ item.cantidad }} — ${{ item.precio }}
+          </li>
+        </ul>
+        <div class="font-bold mt-2">Total: ${{ total }}</div>
+      </div>
+      <button
+        class="px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition mt-6 w-full payment-confirm-btn"
+        [disabled]="loading"
+        (click)="confirmarPago()"
+        *ngIf="clientSecret && items.length > 0"
+      >
+        {{ loading ? 'Procesando pago...' : 'Confirmar pago' }}
+      </button>
+    </div>
+  </div>
 </div>
+<app-footer></app-footer>

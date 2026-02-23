@@ -1,3 +1,204 @@
+/* Overlay de éxito */
+.payment-overlay-success {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(30, 41, 59, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeInOverlay 0.7s ease forwards;
+}
+.payment-overlay-success .payment-overlay-content {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  padding: 3rem 2.5rem 2.5rem 2.5rem;
+  text-align: center;
+  min-width: 320px;
+}
+.payment-overlay-success .payment-overlay-icon {
+  font-size: 3.5rem;
+  color: #22c55e;
+  margin-bottom: 16px;
+}
+.payment-overlay-success .payment-overlay-content h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #22c55e;
+  margin-bottom: 0.5rem;
+}
+
+.payment-overlay-success .payment-overlay-content h2 {
+  color: #22c55e !important;
+}
+
+.payment-summary-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  color: #1e293b;
+  letter-spacing: -1px;
+}
+
 #payment-form {
   margin-top: 20px;
+}
+
+.payment-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 60%, #e0e7ef 100%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.payment-flex-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  max-width: 1200px;
+  margin: 80px auto 60px auto;
+  padding: 0 16px;
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .payment-flex-container {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 4rem;
+    min-height: 1000px;
+    height: 950px;
+  }
+  .payment-flex-left {
+    flex: 1 1 0;
+    max-width: 480px;
+    min-height: 950px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .payment-flex-right-wrapper {
+    flex: 1 1 0;
+    min-width: 400px;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 950px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.payment-flex-right-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.payment-flex-right {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  padding: 2.5rem 2rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 400px;
+  flex: 1 1 auto;
+}
+
+.payment-confirm-btn {
+  margin-top: 2.5rem;
+  font-size: 1.15rem;
+  padding-top: 1.1rem;
+  padding-bottom: 1.1rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(34,197,94,0.08);
+  width: 100%;
+  align-self: flex-end;
+}
+
+.payment-flex-left {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+  padding: 2.5rem 2rem 2rem 2rem;
+  min-height: 400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.payment-error {
+  color: #dc2626;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.payment-overlay-error {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(30, 41, 59, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeInOverlay 0.7s ease forwards;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.payment-overlay-content {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  padding: 3rem 2.5rem 2.5rem 2.5rem;
+  text-align: center;
+  min-width: 320px;
+}
+
+.payment-overlay-content h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #dc2626;
+  margin-bottom: 0.5rem;
+}
+.payment-overlay-success .payment-overlay-content h2 {
+  color: #22c55e !important;
+}
+
+
+.payment-overlay-content p {
+  color: #475569;
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+
+.payment-overlay-icon {
+  font-size: 3.5rem;
+  color: #dc2626;
+  display: block;
+  margin-bottom: 1.2rem;
+}
+
+.blur-sm {
+  filter: blur(2px);
 }
