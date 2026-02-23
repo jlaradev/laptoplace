@@ -63,7 +63,7 @@ public class StripeWebhookController {
                     order.setEstado(OrderStatus.PROCESANDO);
                 } else {
                     payment.setEstado(PaymentStatus.FALLIDO);
-                    order.setEstado(OrderStatus.PENDIENTE_PAGO);
+                    order.setEstado(OrderStatus.CANCELADO);
                 }
 
                 paymentRepository.save(payment);
