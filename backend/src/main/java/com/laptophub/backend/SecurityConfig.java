@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/health").permitAll()
                 .requestMatchers("/api/auth/**", "/api/users/register").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                .requestMatchers("/api/stripe/webhook").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/product/*/user/*").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/product/*/average").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/product/*").permitAll()
