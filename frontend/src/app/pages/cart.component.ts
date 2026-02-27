@@ -17,6 +17,13 @@ import { FormsModule } from '@angular/forms';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col min-h-screen bg-white">
+      <div *ngIf="mostrarOverlayError" class="payment-overlay-error" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.85);">
+        <div class="payment-overlay-content" style="background:white;padding:2rem 2.5rem;border-radius:1rem;box-shadow:0 2px 16px rgba(0,0,0,0.12);text-align:center;">
+          <span class="payment-overlay-icon" style="font-size:2.5rem;color:#e53e3e;">&#9888;</span>
+          <h2>Ya no hay suficientes unidades disponibles</h2>
+          <p>Se están ajustando las unidades del carrito para reflejar el stock disponible.</p>
+        </div>
+      </div>
       <app-header></app-header>
       <main class="flex-1 container mx-auto px-4 py-8">
         <h1 class="text-2xl font-bold mb-6">Tu carrito</h1>
@@ -89,7 +96,38 @@ export class CartPageComponent implements OnInit {
     /**
      * Navega a la pantalla de pago, pasando el total y los productos del carrito como state.
      */
+    mostrarOverlayError = false;
+    error = '';
     goToPayment() {
+      // Validar stock antes de continuar
+      const productosExcedidos = this.items.filter(item => {
+        const stock = item.product?.stock ?? item.stock ?? Infinity;
+        return item.cantidad > stock;
+      });
+      if (productosExcedidos.length > 0) {
+        this.mostrarOverlayError = true;
+        this.error = 'Ya no hay suficientes unidades disponibles.';
+        this.cdr.detectChanges();
+        // Ajustar cantidades antes de recargar
+        productosExcedidos.forEach(item => {
+          const stock = item.product?.stock ?? item.stock ?? 1;
+          if (stock === 0) {
+            this.cartService.removeFromCart(item.id).subscribe({
+              next: () => {},
+              error: () => {}
+            });
+          } else {
+            this.cartService.updateItemQuantity(item.id, stock).subscribe({
+              next: () => {},
+              error: () => {}
+            });
+          }
+        });
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
+        return;
+      }
       // Se pasa el total y los productos (id, cantidad, precio, nombre) como state
       const cartData = {
         total: this.total,

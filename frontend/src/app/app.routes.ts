@@ -15,5 +15,6 @@ export const routes: Routes = [
   { path: 'compare', component: CompareComponent },
   { path: 'cart', component: CartPageComponent },
   { path: 'payment', loadComponent: () => import('./payment').then(m => m.PaymentComponent) },
+  { path: 'profile', loadComponent: () => import('./pages/profile.component').then(m => m.ProfileComponent) },
   { path: '**', redirectTo: '' }
 ];

@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../services/auth.service';
 import { CartService } from '../services/cart.service';
+import { UserService, User } from '../services/user.service';
 
 @Component({
   selector: 'app-header',
@@ -47,13 +48,20 @@ import { CartService } from '../services/cart.service';
               </div>
             </div>
           </ng-container>
-          <span *ngIf="isLoggedIn && userEmail" class="text-blue-700 font-bold text-base mr-2">BIENVENIDO, {{ userEmail }}</span>
+          <span *ngIf="isLoggedIn && userName" class="text-blue-700 font-bold text-base mr-2">BIENVENIDO, {{ userName }}</span>
           <button *ngIf="!isLoggedIn" (click)="goToLogin()" class="px-5 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 transition cursor-pointer">
             Iniciar sesion
           </button>
-          <button *ngIf="isLoggedIn" (click)="logout()" class="px-5 py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition">
-            Cerrar sesion
-          </button>
+          <div *ngIf="isLoggedIn" class="relative">
+            <button (click)="toggleUserDropdown()" class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.657 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Usuario
+            </button>
+            <div *ngIf="showUserDropdown" class="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+              <button (click)="goToProfile()" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-700 font-semibold">Mi perfil</button>
+              <button (click)="logout()" class="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 font-semibold">Cerrar sesión</button>
+            </div>
+          </div>
         </div>
       </div>
     </header>
@@ -61,11 +69,22 @@ import { CartService } from '../services/cart.service';
   styles: []
 })
 export class HeaderComponent implements OnInit, OnDestroy {
+    toggleUserDropdown() {
+      this.showUserDropdown = !this.showUserDropdown;
+    }
+
+    goToProfile() {
+      this.router.navigate(['/profile']);
+      this.showUserDropdown = false;
+    }
+  showUserDropdown = false;
+  // ...existing code...
   private authService = inject(AuthService);
   private cartService = inject(CartService);
   private router = inject(Router);
   isLoggedIn = this.authService.isLoggedInSync();
-  userEmail: string | null = null;
+  userName: string | null = null;
+  private userService = inject(UserService);
   cartRaw = signal<any>(null);
   showCartDropdown = signal(false);
   private clickListener: any;
@@ -74,14 +93,30 @@ export class HeaderComponent implements OnInit, OnDestroy {
   isOnCartPage = false;
 
   constructor() {
+      // ...existing code...
     // keep constructor lightweight; initialization in ngOnInit
   }
 
   ngOnInit(): void {
+      // ...existing code...
     this.isLoggedIn = this.authService.isLoggedInSync();
     if (this.isLoggedIn) {
-      this.userEmail = this.authService.getUserEmail();
-      this.loadCart();
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        this.userService.getUserById(userId).subscribe({
+          next: (u: User) => {
+            this.userName = u.nombre;
+            this.loadCart();
+          },
+          error: () => {
+            this.userName = null;
+            this.loadCart();
+          }
+        });
+      } else {
+        this.userName = null;
+        this.loadCart();
+      }
     }
     // Suscribirse a cambios en el carrito para recargar o aplicar cambios parciales
     this.cartService.cartChanged$.subscribe((ev: any) => {
@@ -128,6 +163,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+      // ...existing code...
     if (this.clickListener) document.removeEventListener('click', this.clickListener, true);
     this.routerSub?.unsubscribe();
   }
@@ -188,6 +224,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
       this.loadCart();
     }
   }
+
+  // ...existing code...
 
   goToLogin() {
     this.router.navigate(['/login'], { queryParams: { redirect: this.router.url } });

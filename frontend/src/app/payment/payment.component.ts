@@ -1,8 +1,11 @@
+// ...existing imports...
 import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { PaymentService, PaymentResponseDTO } from './payment.service';
 import { OrderService } from '../services/order.service';
+import { UserService, User } from '../services/user.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 
@@ -14,9 +17,20 @@ const STRIPE_PUBLISHABLE_KEY = (window as any).APP_CONFIG?.stripePublishableKey;
   templateUrl: './payment.component.html',
   styleUrls: ['./payment.component.css'],
   standalone: true,
-  imports: [CommonModule, HeaderComponent, FooterComponent],
+  imports: [CommonModule, FormsModule, HeaderComponent, FooterComponent],
 })
 export class PaymentComponent implements OnInit {
+  paymentMethodSelected: boolean = false;
+  public toastMsg: string | null = null;
+  public toastVisible: boolean = false;
+
+  onStripeElementChange(event: any) {
+    this.paymentMethodSelected = !!event.complete;
+    if (event.complete && event.value && event.value.type) {
+      console.log('[Stripe] Método de pago seleccionado:', event.value.type, event.value);
+    }
+    this.cdr.detectChanges();
+  }
   clientSecret: string | null = null;
   paymentResponse: PaymentResponseDTO | null = null;
   loading = false;
@@ -29,63 +43,100 @@ export class PaymentComponent implements OnInit {
   total: number = 0;
   items: any[] = [];
 
+  direccionEnvio: string = '';
+  direccionConfirmada: boolean = false;
+  mostrarFormularioDireccion: boolean = false;
+  direccionUsuario: string = '';
+  userId: string | null = null;
+  userLoaded: boolean = false;
+
   @ViewChild('paymentForm') paymentFormRef!: ElementRef;
 
   constructor(
     private paymentService: PaymentService,
     private orderService: OrderService,
+    private userService: UserService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    console.log('[Payment] ngOnInit - checking history.state');
     const state: any = window.history.state;
-    console.log('[Payment] history.state =', state);
     if (state && state.total && state.items) {
       this.total = parseFloat(state.total);
       this.items = state.items;
-      console.log('[Payment] loaded cart data', { total: this.total, items: this.items });
-      this.iniciarPago();
+      this.userId = localStorage.getItem('userId');
+      if (!this.userId) {
+        this.error = 'No hay usuario autenticado.';
+        return;
+      }
+      // Obtener dirección del usuario
+      this.userService.getUserById(this.userId).subscribe({
+        next: (user: User) => {
+          this.direccionUsuario = user.direccion || '';
+          this.direccionEnvio = this.direccionUsuario;
+          this.userLoaded = true;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = 'No se pudo obtener la dirección del usuario.';
+          this.userLoaded = true;
+        }
+      });
     } else {
       this.error = 'No hay datos del carrito. Regresa y selecciona productos.';
-      console.warn('[Payment] no cart data in history.state');
     }
   }
 
   iniciarPago() {
-    this.loading = true;
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
+    if (!this.userId) {
       this.error = 'No hay usuario autenticado.';
-      this.loading = false;
       return;
     }
-    // Preparar datos para crear la orden
-    const direccionEnvio = 'Dirección de prueba'; // Puedes ajustar esto según tu UI
-    const orderPayload = { direccionEnvio };
-    console.log('[Payment] crear orden - payload:', orderPayload);
-    this.orderService.createOrderFromCart(userId, orderPayload).subscribe({
+    // No activar loading aquí, solo al confirmar pago
+    const orderPayload = { direccionEnvio: this.direccionEnvio };
+    this.orderService.createOrderFromCart(this.userId, orderPayload).subscribe({
       next: (orderResp) => {
-        console.log('[Payment] orden creada:', orderResp);
-        // Usar el clientSecret del pago ya creado en el backend
         if (orderResp.payment && orderResp.payment.clientSecret) {
           this.paymentResponse = orderResp.payment;
           this.clientSecret = orderResp.payment.clientSecret;
-          this.loading = false;
+          this.direccionConfirmada = true;
           this.cdr.detectChanges();
-          setTimeout(() => this.setupPaymentElement(), 0);
+          setTimeout(() => {
+            this.setupPaymentElement();
+            this.loading = false;
+          }, 0);
         } else {
           this.error = 'No se pudo obtener el clientSecret del pago.';
           this.loading = false;
         }
       },
       error: (err) => {
-        console.error('[Payment] error al crear orden', err);
-        this.error = 'Error al crear la orden';
+        // Detectar error de stock insuficiente
+        const msg = err?.error?.message || err?.error || '';
+        if (msg && msg.toLowerCase().includes('stock')) {
+          this.mostrarOverlayError = true;
+          this.error = 'Ya no hay suficientes unidades disponibles.';
+          this.cdr.detectChanges();
+          setTimeout(() => {
+            this.router.navigate(['/cart']);
+          }, 5000);
+        } else {
+          this.error = 'Error al crear la orden';
+        }
         this.loading = false;
       }
     });
+  }
+
+  usarOtraDireccion() {
+    this.mostrarFormularioDireccion = true;
+    this.direccionEnvio = '';
+  }
+
+  cancelarOtraDireccion() {
+    this.mostrarFormularioDireccion = false;
+    this.direccionEnvio = this.direccionUsuario;
   }
 
   setupPaymentElement() {
@@ -117,6 +168,10 @@ export class PaymentComponent implements OnInit {
       formDiv.innerHTML = '';
       this.paymentElement = this.elements.create('payment');
       this.paymentElement.mount(formDiv);
+      // Escuchar cambios en el Payment Element para saber si hay método de pago seleccionado
+      this.paymentElement.on('change', (event: any) => this.onStripeElementChange(event));
+      this.paymentMethodSelected = false;
+      this.loading = false;
       console.log('[StripeElement] Payment Element montado correctamente en #payment-form');
     } catch (e) {
       console.error('[StripeElement] Error Stripe Elements:', e);
@@ -127,6 +182,15 @@ export class PaymentComponent implements OnInit {
   mostrarOverlayError = false;
   mostrarOverlayAprobada = false;
 
+  public showToast(message: string, isError: boolean = false): void {
+    this.toastMsg = message;
+    this.toastVisible = true;
+    setTimeout(() => {
+      this.toastVisible = false;
+      setTimeout(() => { this.toastMsg = null; }, 300);
+    }, 2500);
+  }
+
   async confirmarPago() {
     console.log('[Payment] confirmarPago invoked');
     if (!this.stripe || !this.clientSecret) {
@@ -134,6 +198,10 @@ export class PaymentComponent implements OnInit {
         stripe: !!this.stripe,
         clientSecret: this.clientSecret
       });
+      return;
+    }
+    if (!this.paymentMethodSelected) {
+      this.showToast('Debe proporcionar el método de pago', true);
       return;
     }
     this.loading = true;
