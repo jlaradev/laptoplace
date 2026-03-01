@@ -3,7 +3,8 @@ package com.laptophub.backend.model;
 public enum PaymentStatus {
     PENDIENTE("pendiente"),
     COMPLETADO("completado"),
-    FALLIDO("fallido");
+    FALLIDO("fallido"),
+    EXPIRADO("expirado");
     
     private final String value;
     

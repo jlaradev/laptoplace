@@ -161,22 +161,54 @@ public class OrderService {
     public int expirePendingPaymentOrders() {
         LocalDateTime now = LocalDateTime.now();
         List<Order> expired = orderRepository.findByEstadoAndExpiresAtBefore(OrderStatus.PENDIENTE_PAGO, now);
-        
+
         if (expired.isEmpty()) {
             return 0;
         }
-        
+
         for (Order order : expired) {
-            restoreOrderStock(order);
-            order.setEstado(OrderStatus.EXPIRADO);
-            
-            if (order.getPayment() != null) {
-                order.getPayment().setEstado(PaymentStatus.FALLIDO);
+            // Releer la orden con lock para evitar race conditions y doble-restore
+            Order lockedOrder = orderRepository.findByIdWithLock(order.getId()).orElse(null);
+            if (lockedOrder == null) {
+                continue;
             }
-            
-            orderRepository.save(order);
+
+            // Verificar aún está pendiente y vencida (otro proceso pudo haberla cambiado)
+            if (lockedOrder.getEstado() != OrderStatus.PENDIENTE_PAGO || lockedOrder.getExpiresAt().isAfter(now)) {
+                continue;
+            }
+
+            // Si hay un pago asociado, primero sincronizamos su estado con Stripe
+            if (lockedOrder.getPayment() != null) {
+                try {
+                    paymentService.checkAndSyncPaymentStatus(lockedOrder.getPayment().getId());
+                } catch (Exception e) {
+                    // No detener el proceso por un error en Stripe; registrar y continuar
+                    System.err.println("[OrderService] Error sincronizando pago en Stripe para orden " + lockedOrder.getId() + ": " + e.getMessage());
+                }
+
+                // Si después de sincronizar el pago está completado, saltamos la expiración
+                if (lockedOrder.getPayment().getEstado() == PaymentStatus.COMPLETADO) {
+                    continue;
+                }
+
+                // Intentar cancelar PaymentIntent en Stripe si existe
+                try {
+                    paymentService.cancelPayment(lockedOrder.getPayment().getId());
+                } catch (Exception e) {
+                    System.err.println("[OrderService] Error cancelando PaymentIntent en Stripe para orden " + lockedOrder.getId() + ": " + e.getMessage());
+                }
+            }
+
+            restoreOrderStock(lockedOrder);
+            lockedOrder.setEstado(OrderStatus.EXPIRADO);
+            if (lockedOrder.getPayment() != null) {
+                lockedOrder.getPayment().setEstado(PaymentStatus.EXPIRADO);
+            }
+
+            orderRepository.save(lockedOrder);
         }
-        
+
         return expired.size();
     }
     

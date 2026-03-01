@@ -79,6 +79,132 @@ public class OrderControllerTest {
         System.out.println("✅ TEST 11 PASÓ: clientSecret devuelto correctamente en payment de orden\n");
     }
 
+    /**
+     * TEST 12: Verificar que expirar una orden cambia estado, marca pago como EXPIRADO y restaura stock
+     */
+    @Test
+    @org.junit.jupiter.api.Order(12)
+    public void test12_ExpireOrderEffects() throws Exception {
+        System.out.println("\n=== TEST 12: Verificar efectos de expiración ===");
+
+        // Si las variables estáticas no están inicializadas (ej. ejecutando solo este test), inicializar minimalmente
+        if (userId == null || productId == null || userToken == null || adminToken == null) {
+            String uniqueEmail = TestAuthHelper.uniqueEmail("order.test");
+            AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                    mockMvc,
+                    objectMapper,
+                    uniqueEmail,
+                    "password123",
+                    "Order",
+                    "Tester"
+            );
+            userId = authInfo.getUserId();
+            userToken = authInfo.getToken();
+            adminToken = TestAuthHelper.createAdminAndLogin(
+                    userRepository,
+                    passwordEncoder,
+                    mockMvc,
+                    objectMapper,
+                    TestAuthHelper.uniqueEmail("order.admin"),
+                    "admin123"
+            );
+
+            // Crear producto de prueba
+            Product testProduct = Product.builder()
+                    .nombre("Laptop Test Expire")
+                    .descripcion("Producto para test expiracion")
+                    .precio(new BigDecimal("99.99"))
+                    .stock(10)
+                    .marca("TestBrand")
+                    .procesador("TestCPU")
+                    .ram(4)
+                    .almacenamiento(128)
+                    .pantalla("13")
+                    .gpu("Integrated")
+                    .peso(new BigDecimal("1.5"))
+                    .build();
+            Product savedProduct = productRepository.save(testProduct);
+            productId = savedProduct.getId().toString();
+        }
+
+        // Crear un producto aislado para esta prueba y asegurar carrito limpio
+        Product testProductForExpire = Product.builder()
+                .nombre("Laptop Expire Isolation")
+                .descripcion("Producto aislado para test de expiracion")
+                .precio(new BigDecimal("199.99"))
+                .stock(5)
+                .marca("IsoBrand")
+                .procesador("IsoCPU")
+                .ram(4)
+                .almacenamiento(128)
+                .pantalla("13")
+                .gpu("Integrated")
+                .peso(new BigDecimal("1.2"))
+                .build();
+        Product savedTestProductForExpire = productRepository.save(testProductForExpire);
+        Long localProductId = savedTestProductForExpire.getId();
+
+        cartItemRepository.deleteAll();
+        cartRepository.deleteAll();
+
+        AddToCartDTO addToCart = AddToCartDTO.builder()
+                .productId(localProductId)
+                .cantidad(1)
+                .build();
+
+        mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(addToCart)))
+                .andExpect(status().isOk());
+
+        // stock antes de crear la orden
+        Product productBefore = productRepository.findById(localProductId).orElseThrow();
+        int stockBefore = productBefore.getStock();
+
+        CreateOrderDTO orderDTO = CreateOrderDTO.builder()
+                .direccionEnvio("Calle Expire Test")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(orderDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
+        String newOrderId = jsonNode.get("id").asText();
+
+        // verificar stock disminuyó
+        Product productAfterOrder = productRepository.findById(localProductId).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(stockBefore - 1, productAfterOrder.getStock());
+
+        // Forzar expiresAt al pasado
+        com.laptophub.backend.model.Order order = orderRepository.findById(Long.parseLong(newOrderId)).orElseThrow();
+        order.setExpiresAt(java.time.LocalDateTime.now().minusMinutes(30));
+        orderRepository.save(order);
+
+        // Llamar al endpoint de expiración
+        mockMvc.perform(post("/api/orders/expire")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        // Verificar orden y pago
+        com.laptophub.backend.model.Order expiredOrder = orderRepository.findById(Long.parseLong(newOrderId)).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(com.laptophub.backend.model.OrderStatus.EXPIRADO, expiredOrder.getEstado());
+        org.junit.jupiter.api.Assertions.assertNotNull(expiredOrder.getPayment());
+        org.junit.jupiter.api.Assertions.assertEquals(com.laptophub.backend.model.PaymentStatus.EXPIRADO, expiredOrder.getPayment().getEstado());
+
+        // Verificar stock restaurado
+        Product productAfterExpire = productRepository.findById(localProductId).orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(stockBefore, productAfterExpire.getStock());
+
+        System.out.println("✅ TEST 12 PASÓ: Expiración marcó orden y pago como EXPIRADO y restauró stock\n");
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
