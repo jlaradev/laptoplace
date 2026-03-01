@@ -13,6 +13,8 @@ import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.exception.ResourceNotFoundException;
 import com.laptophub.backend.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
@@ -28,7 +30,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
-    
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
@@ -162,54 +166,35 @@ public class OrderService {
         LocalDateTime now = LocalDateTime.now();
         List<Order> expired = orderRepository.findByEstadoAndExpiresAtBefore(OrderStatus.PENDIENTE_PAGO, now);
 
+        logger.info("[OrderService] [{}] Órdenes candidatas a expirar: {}", now, expired.size());
+
         if (expired.isEmpty()) {
             return 0;
         }
 
+        int count = 0;
         for (Order order : expired) {
-            // Releer la orden con lock para evitar race conditions y doble-restore
             Order lockedOrder = orderRepository.findByIdWithLock(order.getId()).orElse(null);
-            if (lockedOrder == null) {
-                continue;
-            }
+            if (lockedOrder == null) continue;
 
-            // Verificar aún está pendiente y vencida (otro proceso pudo haberla cambiado)
             if (lockedOrder.getEstado() != OrderStatus.PENDIENTE_PAGO || lockedOrder.getExpiresAt().isAfter(now)) {
                 continue;
             }
 
-            // Si hay un pago asociado, primero sincronizamos su estado con Stripe
-            if (lockedOrder.getPayment() != null) {
-                try {
-                    paymentService.checkAndSyncPaymentStatus(lockedOrder.getPayment().getId());
-                } catch (Exception e) {
-                    // No detener el proceso por un error en Stripe; registrar y continuar
-                    System.err.println("[OrderService] Error sincronizando pago en Stripe para orden " + lockedOrder.getId() + ": " + e.getMessage());
-                }
-
-                // Si después de sincronizar el pago está completado, saltamos la expiración
-                if (lockedOrder.getPayment().getEstado() == PaymentStatus.COMPLETADO) {
-                    continue;
-                }
-
-                // Intentar cancelar PaymentIntent en Stripe si existe
-                try {
-                    paymentService.cancelPayment(lockedOrder.getPayment().getId());
-                } catch (Exception e) {
-                    System.err.println("[OrderService] Error cancelando PaymentIntent en Stripe para orden " + lockedOrder.getId() + ": " + e.getMessage());
-                }
-            }
-
             restoreOrderStock(lockedOrder);
             lockedOrder.setEstado(OrderStatus.EXPIRADO);
-            if (lockedOrder.getPayment() != null) {
+
+            if (lockedOrder.getPayment() != null &&
+                lockedOrder.getPayment().getEstado() != PaymentStatus.COMPLETADO) {
                 lockedOrder.getPayment().setEstado(PaymentStatus.EXPIRADO);
             }
 
             orderRepository.save(lockedOrder);
+            count++;
         }
 
-        return expired.size();
+        logger.info("[OrderService] [{}] Órdenes expiradas correctamente: {}", now, count);
+        return count;
     }
     
     @Transactional(readOnly = true)
