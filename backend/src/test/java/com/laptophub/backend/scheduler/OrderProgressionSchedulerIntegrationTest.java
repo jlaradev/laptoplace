@@ -14,22 +14,22 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-public class OrderExpirationSchedulerIntegrationTest {
+public class OrderProgressionSchedulerIntegrationTest {
     @Autowired
     private OrderRepository orderRepository;
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private OrderExpirationScheduler orderExpirationScheduler;
+    private OrderProgressionScheduler orderProgressionScheduler;
+    
     private User testUser;
-    private Long testOrderId;
+    private Long orderId;
 
     @BeforeEach
     @SuppressWarnings("null")
@@ -42,17 +42,17 @@ public class OrderExpirationSchedulerIntegrationTest {
                 .apellido("Scheduler")
                 .build();
         userRepository.save(testUser);
-        // Crear una orden pendiente vencida con total válido y usuario
+
+        // Crear una orden en estado PROCESANDO
         Order order = Order.builder()
-                .estado(OrderStatus.PENDIENTE_PAGO)
-                .expiresAt(LocalDateTime.now().minusMinutes(10))
-                .total(BigDecimal.ONE)
+                .estado(OrderStatus.PROCESANDO)
+                .total(BigDecimal.valueOf(99.99))
                 .user(testUser)
-                .direccionEnvio("Calle Falsa 123")
+                .direccionEnvio("Calle Test 123")
                 .build();
         orderRepository.save(order);
-        testOrderId = order.getId();
-        printOrderDetails("[TEST] Orden creada", order);
+        orderId = order.getId();
+        System.out.println("[TEST] Orden creada en PROCESANDO: ID=" + orderId);
     }
 
     @AfterEach
@@ -61,33 +61,21 @@ public class OrderExpirationSchedulerIntegrationTest {
         userRepository.deleteAll();
     }
 
-    private void printOrderDetails(String label, Order order) {
-        if (order == null) {
-            System.out.println(label + ": null");
-            return;
-        }
-        System.out.println(label + ": {"
-                + "id=" + order.getId()
-                + ", estado=" + order.getEstado()
-                + ", expiresAt=" + order.getExpiresAt()
-                + ", total=" + order.getTotal()
-                + ", direccionEnvio=" + order.getDireccionEnvio()
-                + ", userId=" + (order.getUser() != null ? order.getUser().getId() : null)
-                + "}");
-    }
-
     @Test
     @SuppressWarnings("null")
-    void schedulerShouldExpireOrders() throws InterruptedException {
-        Order before = orderRepository.findById(testOrderId).orElse(null);
-        printOrderDetails("[TEST] Estado inicial de la orden", before);
+    void schedulerShouldProgressOrderThroughStates() throws InterruptedException {
+        // Estado inicial: PROCESANDO
+        Order initial = orderRepository.findById(orderId).orElse(null);
+        assertThat(initial).isNotNull();
+        assertThat(initial.getEstado()).isEqualTo(OrderStatus.PROCESANDO);
+        System.out.println("[TEST] ✓ Orden inicial en PROCESANDO");
         
         // Thread para ejecutar scheduler cada 1 minuto
         Thread schedulerThread = new Thread(() -> {
             try {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 3; i++) {
                     Thread.sleep(60000); // 1 minuto
-                    orderExpirationScheduler.expirePendingOrders();
+                    orderProgressionScheduler.progressOrders();
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -95,16 +83,27 @@ public class OrderExpirationSchedulerIntegrationTest {
         });
         schedulerThread.start();
         
+        // Esperar a que pase a ENVIADO
         Awaitility.await()
                 .atMost(2, TimeUnit.MINUTES)
                 .pollInterval(15, TimeUnit.SECONDS)
                 .untilAsserted(() -> {
-                    Order expired = orderRepository.findById(testOrderId).orElse(null);
-                    printOrderDetails("[TEST] Estado tras scheduler", expired);
-                    assertThat(expired).isNotNull();
-                    assertThat(expired.getEstado()).isEqualTo(OrderStatus.EXPIRADO);
+                    Order progressed = orderRepository.findById(orderId).orElse(null);
+                    assertThat(progressed).isNotNull();
+                    assertThat(progressed.getEstado()).isEqualTo(OrderStatus.ENVIADO);
                 });
-        System.out.println("[TEST] El scheduler expiró la orden correctamente.\n");
+        System.out.println("[TEST] ✓ Scheduler: PROCESANDO → ENVIADO");
+        
+        // Esperar a que pase a ENTREGADO
+        Awaitility.await()
+                .atMost(2, TimeUnit.MINUTES)
+                .pollInterval(15, TimeUnit.SECONDS)
+                .untilAsserted(() -> {
+                    Order delivered = orderRepository.findById(orderId).orElse(null);
+                    assertThat(delivered).isNotNull();
+                    assertThat(delivered.getEstado()).isEqualTo(OrderStatus.ENTREGADO);
+                });
+        System.out.println("[TEST] ✓ Scheduler: ENVIADO → ENTREGADO");
         
         schedulerThread.join();
     }

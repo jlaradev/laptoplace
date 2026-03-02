@@ -57,6 +57,18 @@ public class DTOMapper {
                 .build();
     }
 
+    // BRAND
+    public static BrandResponseDTO toBrandResponse(Brand brand) {
+        if (brand == null) return null;
+        return BrandResponseDTO.builder()
+                .id(brand.getId())
+                .nombre(brand.getNombre())
+                .descripcion(brand.getDescripcion())
+                .imageUrl(brand.getImageUrl())
+                .createdAt(brand.getCreatedAt())
+                .build();
+    }
+
     // PRODUCT
     public static ProductResponseDTO toProductResponse(Product product, List<ProductImage> images, 
                                                        List<Review> reviews, Double avgRating) {
@@ -66,7 +78,7 @@ public class DTOMapper {
                 .descripcion(product.getDescripcion())
                 .precio(product.getPrecio())
                 .stock(product.getStock())
-                .marca(product.getMarca())
+                .brand(toBrandResponse(product.getBrand()))
                 .procesador(product.getProcesador())
                 .ram(product.getRam())
                 .almacenamiento(product.getAlmacenamiento())
@@ -86,19 +98,19 @@ public class DTOMapper {
                 .nombre(product.getNombre())
                 .precio(product.getPrecio())
                 .stock(product.getStock())
-                .marca(product.getMarca())
+                .brand(product.getBrand() != null ? toBrandResponse(product.getBrand()) : null)
                 .imagenPrincipal(mainImage != null ? toProductImageDTO(mainImage) : null)
                 .promedioRating(avgRating)
                 .build();
     }
 
-    public static Product toProduct(ProductCreateDTO dto) {
+    public static Product toProduct(ProductCreateDTO dto, Brand brand) {
         return Product.builder()
                 .nombre(dto.getNombre())
                 .descripcion(dto.getDescripcion())
                 .precio(dto.getPrecio())
                 .stock(dto.getStock())
-                .marca(dto.getMarca())
+                .brand(brand)
                 .procesador(dto.getProcesador())
                 .ram(dto.getRam())
                 .almacenamiento(dto.getAlmacenamiento())

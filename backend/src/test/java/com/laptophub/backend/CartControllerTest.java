@@ -2,9 +2,11 @@ package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.AddToCartDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Cart;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
@@ -53,8 +55,11 @@ public class CartControllerTest {
     @Autowired
     private ProductRepository productRepository;
 
-        @Autowired
-        private ProductImageRepository productImageRepository;
+    @Autowired
+    private ProductImageRepository productImageRepository;
+
+    @Autowired
+    private BrandRepository brandRepository;
 
     private static String userId;
     private static String productId;
@@ -93,13 +98,20 @@ public class CartControllerTest {
         userId = authInfo.getUserId();
         authToken = authInfo.getToken();
         
+        // Crear marca primero
+        Brand lenovo = Brand.builder()
+                .nombre("Lenovo")
+                .descripcion("Marca Lenovo")
+                .build();
+        Brand savedBrand = brandRepository.save(lenovo);
+        
         // Crear producto de prueba
         Product testProduct = Product.builder()
                 .nombre("Laptop Lenovo ThinkPad")
                 .descripcion("Laptop empresarial de alta calidad")
                 .precio(new BigDecimal("999.99"))
                 .stock(50)
-                .marca("Lenovo")
+                .brand(savedBrand)
                 .procesador("Intel Core i5-1135G7")
                 .ram(16)
                 .almacenamiento(512)

@@ -1,8 +1,11 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.dto.ProductCreateDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
@@ -53,6 +56,9 @@ public class ProductImageControllerTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private BrandRepository brandRepository;
 
     @Autowired
     private ReviewRepository reviewRepository;
@@ -149,12 +155,19 @@ public class ProductImageControllerTest {
             "admin123"
         );
 
-        Product testProduct = Product.builder()
+        // Crear marca para producto
+        Brand asusBrand = Brand.builder()
+                .nombre("ASUS")
+                .descripcion("ASUS - Gaming")
+                .build();
+        Brand savedAsusBrand = brandRepository.save(asusBrand);
+
+        ProductCreateDTO testProduct = ProductCreateDTO.builder()
                 .nombre("Laptop ASUS ROG Strix")
                 .descripcion("Laptop gaming de alto rendimiento")
                 .precio(new BigDecimal("1799.99"))
                 .stock(15)
-                .marca("ASUS")
+                .brandId(savedAsusBrand.getId())
                 .procesador("AMD Ryzen 9 5900HX")
                 .ram(32)
                 .almacenamiento(1024)

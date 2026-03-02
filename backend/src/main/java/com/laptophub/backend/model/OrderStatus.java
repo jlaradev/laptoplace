@@ -1,7 +1,6 @@
 package com.laptophub.backend.model;
 
 public enum OrderStatus {
-    PENDIENTE("pendiente"),
     PENDIENTE_PAGO("pendiente_pago"),
     PROCESANDO("procesando"),
     ENVIADO("enviado"),

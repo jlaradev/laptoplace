@@ -35,7 +35,9 @@ public class Product {
     @Column(nullable = false)
     private Integer stock;
     
-    private String marca;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "brand_id")
+    private Brand brand;
     
     private String procesador;
     

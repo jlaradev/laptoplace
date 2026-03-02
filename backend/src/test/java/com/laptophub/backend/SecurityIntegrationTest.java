@@ -2,8 +2,10 @@ package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.ProductCreateDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.support.TestAuthHelper;
 import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
@@ -38,6 +40,9 @@ public class SecurityIntegrationTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private BrandRepository brandRepository;
 
     @Autowired
     private OrderItemRepository orderItemRepository;
@@ -92,13 +97,21 @@ public class SecurityIntegrationTest {
     public void testAdminOnlyProductCreation() throws Exception {
         orderItemRepository.deleteAll();
         productRepository.deleteAll();
+        brandRepository.deleteAll();
+
+        // Crear una marca primero
+        Brand testBrand = Brand.builder()
+                .nombre("TestBrand")
+                .descripcion("Test Brand")
+                .build();
+        Brand savedBrand = brandRepository.save(testBrand);
 
         ProductCreateDTO newProduct = ProductCreateDTO.builder()
                 .nombre("Laptop Test Security")
                 .descripcion("Producto de prueba seguridad")
                 .precio(new BigDecimal("999.99"))
                 .stock(10)
-                .marca("TestBrand")
+                .brandId(savedBrand.getId())
                 .build();
 
         mockMvc.perform(post("/api/products")

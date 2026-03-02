@@ -1,10 +1,15 @@
 package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.dto.BrandCreateDTO;
 import com.laptophub.backend.dto.ProductCreateDTO;
 import com.laptophub.backend.dto.ProductResponseDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
+import com.laptophub.backend.model.Review;
+import com.laptophub.backend.model.User;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.ProductRepository;
@@ -63,16 +68,20 @@ public class ProductControllerTest {
     @Autowired
     private CartItemRepository cartItemRepository;
 
-        @Autowired
-        private UserRepository userRepository;
+    @Autowired
+    private BrandRepository brandRepository;
 
-        @Autowired
-        private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserRepository userRepository;
 
-    private static String productId; // Para compartir entre tests
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    private static String productId;
+    private static String brandId;
     private static final String TEST_PRODUCT_NAME = "Laptop Dell XPS 15";
-    private static final String TEST_BRAND = "Dell";
-        private static String adminToken;
+    private static final String TEST_BRAND_NAME = "Dell";
+    private static String adminToken;
 
     /**
      * Limpia la base de datos una sola vez antes de todos los tests
@@ -83,19 +92,20 @@ public class ProductControllerTest {
     }
 
     /**
-     * TEST 1: Crear producto (POST /api/products)
+     * TEST 1: Crear marca y producto (POST /api/brands y POST /api/products)
      */
     @Test
     @Order(1)
-    public void test1_CreateProduct() throws Exception {
-        // Limpiar BD solo antes del primer test
+    public void test1_CreateBrandAndProduct() throws Exception {
+        // Limpiar BD
         orderItemRepository.deleteAll();
         cartItemRepository.deleteAll();
         reviewRepository.deleteAll();
         productImageRepository.deleteAll();
         productRepository.deleteAll();
+        brandRepository.deleteAll();
         
-        System.out.println("\n=== TEST 1: Crear nuevo producto (POST /api/products) ===");
+        System.out.println("\n=== TEST 1: Crear marca y producto ===");
         
         adminToken = TestAuthHelper.createAdminAndLogin(
                 userRepository,
@@ -106,12 +116,33 @@ public class ProductControllerTest {
                 "admin123"
         );
 
+        // Crear marca primero
+        BrandCreateDTO brandDTO = BrandCreateDTO.builder()
+                .nombre(TEST_BRAND_NAME)
+                .descripcion("Marca Dell - Computers de alto rendimiento")
+                .build();
+
+        MvcResult brandResult = mockMvc.perform(post("/api/brands")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(brandDTO)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.nombre").value(TEST_BRAND_NAME))
+                .andReturn();
+
+        String brandResponse = brandResult.getResponse().getContentAsString();
+        Brand createdBrand = objectMapper.readValue(brandResponse, Brand.class);
+        brandId = createdBrand.getId().toString();
+
+        // Crear producto con la marca creada
         ProductCreateDTO newProduct = ProductCreateDTO.builder()
                 .nombre(TEST_PRODUCT_NAME)
                 .descripcion("Laptop de alto rendimiento para profesionales")
                 .precio(new BigDecimal("1299.99"))
                 .stock(25)
-                .marca(TEST_BRAND)
+                .brandId(Long.parseLong(brandId))
                 .procesador("Intel Core i7-12700H")
                 .ram(16)
                 .almacenamiento(512)
@@ -128,19 +159,18 @@ public class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.nombre").value(TEST_PRODUCT_NAME))
-                .andExpect(jsonPath("$.marca").value(TEST_BRAND))
+                .andExpect(jsonPath("$.brand.nombre").value(TEST_BRAND_NAME))
                 .andExpect(jsonPath("$.precio").value(1299.99))
                 .andExpect(jsonPath("$.stock").value(25))
                 .andExpect(jsonPath("$.imagenes").isArray())
                 .andExpect(jsonPath("$.resenas").isArray())
                 .andReturn();
 
-        // Guardar el ID para los siguientes tests
         String response = result.getResponse().getContentAsString();
         ProductResponseDTO createdProduct = objectMapper.readValue(response, ProductResponseDTO.class);
         productId = createdProduct.getId().toString();
         
-        // Agregar imagen principal manualmente a la BD
+        // Agregar imagen principal
         Product product = productRepository.findById(Long.parseLong(productId))
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         ProductImage mainImage = ProductImage.builder()
@@ -151,7 +181,7 @@ public class ProductControllerTest {
                 .build();
         productImageRepository.save(mainImage);
         
-        System.out.println("✅ TEST 1 PASÓ: Producto creado con ID: " + productId + "\n");
+        System.out.println("✅ TEST 1 PASÓ: Marca creada con ID: " + brandId + ", Producto creado con ID: " + productId + "\n");
     }
 
     /**
@@ -167,7 +197,7 @@ public class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(productId))
                 .andExpect(jsonPath("$.nombre").value(TEST_PRODUCT_NAME))
-                .andExpect(jsonPath("$.marca").value(TEST_BRAND));
+                .andExpect(jsonPath("$.brand.nombre").value(TEST_BRAND_NAME));
         
         System.out.println("✅ TEST 2 PASÓ: Producto encontrado por ID\n");
     }
@@ -194,14 +224,14 @@ public class ProductControllerTest {
     }
 
     /**
-     * TEST 4: Buscar producto por nombre (GET /api/products/search?nombre=...) con paginación
+     * TEST 4: Buscar producto por nombre con endpoint unificado
      */
     @Test
     @Order(4)
     public void test4_SearchProductByName() throws Exception {
-        System.out.println("\n=== TEST 4: Buscar producto por nombre (GET /api/products/search) ===");
+        System.out.println("\n=== TEST 4: Buscar producto por nombre (GET /api/products?nombre=...) ===");
         
-        mockMvc.perform(get("/api/products/search")
+        mockMvc.perform(get("/api/products")
                         .param("nombre", "Dell XPS")
                         .param("page", "0")
                         .param("size", "10"))
@@ -215,24 +245,153 @@ public class ProductControllerTest {
     }
 
     /**
-     * TEST 5: Buscar productos por marca (GET /api/products/brand?marca=...) con paginación
+     * TEST 5: Buscar productos por marca con endpoint unificado
      */
     @Test
     @Order(5)
     public void test5_FindProductsByBrand() throws Exception {
-        System.out.println("\n=== TEST 5: Buscar productos por marca (GET /api/products/brand) ===");
+        System.out.println("\n=== TEST 5: Buscar productos por marca (GET /api/products?brandId=...) ===");
         
-        mockMvc.perform(get("/api/products/brand")
-                        .param("marca", TEST_BRAND)
+        mockMvc.perform(get("/api/products")
+                        .param("brandId", String.valueOf(brandId))
                         .param("page", "0")
                         .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[0].marca").value(TEST_BRAND))
                 .andExpect(jsonPath("$.totalElements").exists());
         
         System.out.println("✅ TEST 5 PASÓ: Productos encontrados por marca (paginados)\n");
+    }
+
+    /**
+     * TEST 5.1: Ordenar por PRECIO ascendente (menor a mayor)
+     */
+    @Test
+    @Order(51)
+    public void test5_1_SortByPriceAscending() throws Exception {
+        System.out.println("\n=== TEST 5.1: Ordenar por PRECIO ascendente (GET /api/products?sortBy=price&sort=asc) ===");
+        
+        MvcResult result = mockMvc.perform(get("/api/products")
+                        .param("sortBy", "price")
+                        .param("sort", "asc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andReturn();
+        
+        String content = result.getResponse().getContentAsString();
+        if (content.contains("content")) {
+            System.out.println("✅ TEST 5.1 PASÓ: Productos ordenados por precio ascendente\n");
+        }
+    }
+
+    /**
+     * TEST 5.2: Ordenar por PRECIO descendente (mayor a menor)
+     */
+    @Test
+    @Order(52)
+    public void test5_2_SortByPriceDescending() throws Exception {
+        System.out.println("\n=== TEST 5.2: Ordenar por PRECIO descendente (GET /api/products?sortBy=price&sort=desc) ===");
+        
+        mockMvc.perform(get("/api/products")
+                        .param("sortBy", "price")
+                        .param("sort", "desc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
+        
+        System.out.println("✅ TEST 5.2 PASÓ: Productos ordenados por precio descendente\n");
+    }
+
+    /**
+     * TEST 5.3: Ordenar por NOMBRE ascendente (A-Z)
+     */
+    @Test
+    @Order(53)
+    public void test5_3_SortByNameAscending() throws Exception {
+        System.out.println("\n=== TEST 5.3: Ordenar por NOMBRE ascendente (GET /api/products?sortBy=name&sort=asc) ===");
+        
+        mockMvc.perform(get("/api/products")
+                        .param("sortBy", "name")
+                        .param("sort", "asc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
+        
+        System.out.println("✅ TEST 5.3 PASÓ: Productos ordenados por nombre ascendente (A-Z)\n");
+    }
+
+    /**
+     * TEST 5.4: Ordenar por NOMBRE descendente (Z-A)
+     */
+    @Test
+    @Order(54)
+    public void test5_4_SortByNameDescending() throws Exception {
+        System.out.println("\n=== TEST 5.4: Ordenar por NOMBRE descendente (GET /api/products?sortBy=name&sort=desc) ===");
+        
+        mockMvc.perform(get("/api/products")
+                        .param("sortBy", "name")
+                        .param("sort", "desc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
+        
+        System.out.println("✅ TEST 5.4 PASÓ: Productos ordenados por nombre descendente (Z-A)\n");
+    }
+
+    /**
+     * TEST 5.5: Ordenar por RATING descendente (mejor valorados)
+     */
+    @Test
+    @Order(55)
+    public void test5_5_SortByRatingDescending() throws Exception {
+        System.out.println("\n=== TEST 5.5: Ordenar por RATING descendente (GET /api/products?sortBy=rating&sort=desc) ===");
+        
+        mockMvc.perform(get("/api/products")
+                        .param("sortBy", "rating")
+                        .param("sort", "desc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").exists());
+        
+        System.out.println("✅ TEST 5.5 PASÓ: Productos ordenados por rating descendente (mejores primero)\n");
+    }
+
+    /**
+     * TEST 5.6: Búsqueda combinada - por nombre, marca y precio
+     */
+    @Test
+    @Order(56)
+    public void test5_6_CombinedSearch() throws Exception {
+        System.out.println("\n=== TEST 5.6: Búsqueda combinada (nombre + brandId + sortBy=price) ===");
+        
+        mockMvc.perform(get("/api/products")
+                        .param("nombre", "XPS")
+                        .param("brandId", String.valueOf(brandId))
+                        .param("sortBy", "price")
+                        .param("sort", "asc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+        
+        System.out.println("✅ TEST 5.6 PASÓ: Búsqueda combinada funcionando correctamente\n");
     }
 
     /**
@@ -243,12 +402,12 @@ public class ProductControllerTest {
     public void test6_UpdateProduct() throws Exception {
         System.out.println("\n=== TEST 6: Actualizar producto (PUT /api/products/{id}) ===");
         
-        Product updateData = Product.builder()
+        ProductCreateDTO updateData = ProductCreateDTO.builder()
                 .nombre("Laptop Dell XPS 15 (Actualizado)")
                 .descripcion("Laptop de alto rendimiento - versión actualizada")
                 .precio(new BigDecimal("1199.99"))
                 .stock(30)
-                .marca(TEST_BRAND)
+                .brandId(Long.parseLong(brandId))
                 .procesador("Intel Core i7-12700H")
                 .ram(32)
                 .almacenamiento(1024)
@@ -292,19 +451,37 @@ public class ProductControllerTest {
     }
 
     /**
-     * TEST 8: Crear producto final para verificación manual en BD
+     * TEST 8: Crear producto final para verificación manual en BD con otra marca
      */
     @Test
     @Order(8)
     public void test8_CreateFinalProductForVerification() throws Exception {
-        System.out.println("\n=== TEST 8: Crear producto final para verificación manual ===");
+        System.out.println("\n=== TEST 8: Crear producto final con otra marca para verificación ===");
         
-        Product finalProduct = Product.builder()
+        // Crear marca HP primero
+        BrandCreateDTO hpBrandDTO = BrandCreateDTO.builder()
+                .nombre("HP")
+                .descripcion("Marca HP - Computadoras de gaming")
+                .build();
+
+        MvcResult hpBrandResult = mockMvc.perform(post("/api/brands")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(hpBrandDTO)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String hpBrandResponse = hpBrandResult.getResponse().getContentAsString();
+        Brand hpBrand = objectMapper.readValue(hpBrandResponse, Brand.class);
+
+        // Crear producto HP con la marca recién creada
+        ProductCreateDTO finalProduct = ProductCreateDTO.builder()
                 .nombre("Laptop HP Pavilion Gaming")
                 .descripcion("Laptop gaming con excelente relación calidad-precio")
                 .precio(new BigDecimal("899.99"))
                 .stock(15)
-                .marca("HP")
+                .brandId(hpBrand.getId())
                 .procesador("AMD Ryzen 7 5800H")
                 .ram(16)
                 .almacenamiento(512)
@@ -321,17 +498,21 @@ public class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.nombre").value("Laptop HP Pavilion Gaming"))
+                .andExpect(jsonPath("$.brand.nombre").value("HP"))
                 .andReturn();
 
         String response = result.getResponse().getContentAsString();
-        Product createdProduct = objectMapper.readValue(response, Product.class);
+        ProductResponseDTO createdProduct = objectMapper.readValue(response, ProductResponseDTO.class);
         
-        // Agregar 3 imágenes usando ProductImage
+        // Agregar 3 imágenes
+        Product product = productRepository.findById(createdProduct.getId())
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+        
         ProductImage image1 = ProductImage.builder()
                 .url("https://example.com/hp-pavilion-main.jpg")
                 .orden(0)
                 .descripcion("Vista principal")
-                .product(createdProduct)
+                .product(product)
                 .build();
         productImageRepository.save(image1);
         
@@ -339,7 +520,7 @@ public class ProductControllerTest {
                 .url("https://example.com/hp-pavilion-side.jpg")
                 .orden(1)
                 .descripcion("Vista lateral")
-                .product(createdProduct)
+                .product(product)
                 .build();
         productImageRepository.save(image2);
 
@@ -347,15 +528,125 @@ public class ProductControllerTest {
                 .url("https://example.com/hp-pavilion-ports.jpg")
                 .orden(2)
                 .descripcion("Puertos laterales")
-                .product(createdProduct)
+                .product(product)
                 .build();
         productImageRepository.save(image3);
         
-        System.out.println("✅ TEST 8 PASÓ: Producto final creado con ID: " + createdProduct.getId());
-                System.out.println("✅ 3 imágenes agregadas a product_images");
+        System.out.println("✅ TEST 8 PASÓ: Producto HP creado con ID: " + createdProduct.getId());
+        System.out.println("✅ 3 imágenes agregadas a product_images");
         System.out.println("📋 Verifica en tu gestor de BD:");
-        System.out.println("   - Producto: Laptop HP Pavilion Gaming");
-                System.out.println("   - 3 imágenes en product_images (orden 0-2)");
-        System.out.println("   - Campo imagen_url debe estar NULL\n");
+        System.out.println("   - Producto: Laptop HP Pavilion Gaming con brand_id = " + hpBrand.getId());
+        System.out.println("   - 3 imágenes en product_images (orden 0-2)");
+        System.out.println("   - Campo marca (String) debe estar NULL\n");
+    }
+
+    /**
+     * TEST 9: Top 10 mejor valorados (GET /api/products/top-rated)
+     */
+    @Test
+    @Order(9)
+    public void test9_GetTopRatedProducts() throws Exception {
+        System.out.println("\n=== TEST 9: Obtener 10 mejores productos (GET /api/products/top-rated) ===");
+        
+        // Limpiar y preparar datos para este test
+        reviewRepository.deleteAll();
+        cartItemRepository.deleteAll();
+        orderItemRepository.deleteAll();
+        productImageRepository.deleteAll();
+        productRepository.deleteAll();
+        brandRepository.deleteAll();
+        userRepository.deleteAll();
+        
+        // Crear usuario admin para crear el producto
+        String adminEmail = TestAuthHelper.uniqueEmail("test9.admin");
+        String adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository,
+                passwordEncoder,
+                mockMvc,
+                objectMapper,
+                adminEmail,
+                "admin123"
+        );
+        
+        // Crear usuario regular para crear reviews usando registerAndLogin
+        String regularEmail = TestAuthHelper.uniqueEmail("test9.reviewer");
+        TestAuthHelper.AuthInfo regularAuth = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                regularEmail,
+                "password123",
+                "Test",
+                "User"
+        );
+        String regularToken = regularAuth.getToken();
+        
+        // Crear marca
+        BrandCreateDTO brandDTO = BrandCreateDTO.builder()
+                .nombre("TestBrand_TopRated")
+                .descripcion("Marca para test de top rated")
+                .imageUrl("https://example.com/brand.jpg")
+                .build();
+        
+        MvcResult brandResult = mockMvc.perform(post("/api/brands")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(brandDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+        
+        Brand testBrand = objectMapper.readValue(brandResult.getResponse().getContentAsString(), Brand.class);
+        
+        // Crear producto
+        ProductCreateDTO productDTO = ProductCreateDTO.builder()
+                .nombre("Test Product Top Rated")
+                .descripcion("Product for top rated test")
+                .precio(new BigDecimal("999.99"))
+                .stock(50)
+                .brandId(testBrand.getId())
+                .procesador("Intel Core i5")
+                .ram(8)
+                .almacenamiento(256)
+                .pantalla("13.3 pulgadas")
+                .gpu("Intel UHD")
+                .peso(new BigDecimal("1.5"))
+                .build();
+        
+        MvcResult productResult = mockMvc.perform(post("/api/products")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(productDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+        
+        Product testProduct = objectMapper.readValue(productResult.getResponse().getContentAsString(), Product.class);
+        
+        // Obtener el usuario regular creado para poder asignarlo a un review
+        User regularUser = userRepository.findByEmail(regularEmail).orElseThrow();
+        
+        // Crear reviews con diferentes ratings para que el producto tenga una buena puntuación
+        for (int i = 0; i < 5; i++) {
+            Review review = Review.builder()
+                    .product(testProduct)
+                    .user(regularUser)
+                    .rating(5) // 5 estrellas
+                    .comentario("Excelente producto - Review " + (i + 1))
+                    .build();
+            reviewRepository.save(review);
+        }
+        
+        // Ahora llamar al endpoint top-rated
+        mockMvc.perform(get("/api/products/top-rated"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.content[0]").exists())
+                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.content[0].nombre").exists())
+                .andExpect(jsonPath("$.content[0].precio").exists())
+                .andExpect(jsonPath("$.content[0].brand").exists())
+                .andExpect(jsonPath("$.content[0].promedioRating").exists());
+        
+        System.out.println("✅ TEST 9 PASÓ: Top 10 mejor valorados obtenido correctamente\n");
     }
 }

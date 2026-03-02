@@ -2,7 +2,9 @@ package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.CreateReviewDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Product;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.repository.UserRepository;
@@ -51,6 +53,9 @@ public class ReviewControllerTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private BrandRepository brandRepository;
+
     private static String userId;
     private static String productId;
     private static String reviewId;
@@ -90,13 +95,20 @@ public class ReviewControllerTest {
         userId = authInfo.getUserId();
         userToken = authInfo.getToken();
         
+        // Crear marca primero
+        Brand asusBrand = Brand.builder()
+                .nombre("ASUS")
+                .descripcion("Marca ASUS")
+                .build();
+        Brand savedBrand = brandRepository.save(asusBrand);
+        
         // Crear producto de prueba (sin imagenUrl deprecated)
         Product testProduct = Product.builder()
                 .nombre("Laptop Asus ROG Strix")
                 .descripcion("Laptop gaming de alto rendimiento")
                 .precio(new BigDecimal("1499.99"))
                 .stock(30)
-                .marca("ASUS")
+                .brand(savedBrand)
                 .procesador("AMD Ryzen 9 5900HX")
                 .ram(32)
                 .almacenamiento(1024)

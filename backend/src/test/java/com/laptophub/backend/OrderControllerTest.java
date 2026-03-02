@@ -3,8 +3,10 @@ package com.laptophub.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.dto.CreateOrderDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
@@ -109,13 +111,20 @@ public class OrderControllerTest {
                     "admin123"
             );
 
+            // Crear marca para producto
+            Brand testBrand = Brand.builder()
+                    .nombre("TestBrand")
+                    .descripcion("Test Brand")
+                    .build();
+            Brand savedBrand = brandRepository.save(testBrand);
+
             // Crear producto de prueba
             Product testProduct = Product.builder()
                     .nombre("Laptop Test Expire")
                     .descripcion("Producto para test expiracion")
                     .precio(new BigDecimal("99.99"))
                     .stock(10)
-                    .marca("TestBrand")
+                    .brand(savedBrand)
                     .procesador("TestCPU")
                     .ram(4)
                     .almacenamiento(128)
@@ -128,12 +137,18 @@ public class OrderControllerTest {
         }
 
         // Crear un producto aislado para esta prueba y asegurar carrito limpio
+        Brand isoBrand = Brand.builder()
+                .nombre("IsoBrand")
+                .descripcion("Iso Brand")
+                .build();
+        Brand savedIsoBrand = brandRepository.save(isoBrand);
+
         Product testProductForExpire = Product.builder()
                 .nombre("Laptop Expire Isolation")
                 .descripcion("Producto aislado para test de expiracion")
                 .precio(new BigDecimal("199.99"))
                 .stock(5)
-                .marca("IsoBrand")
+                .brand(savedIsoBrand)
                 .procesador("IsoCPU")
                 .ram(4)
                 .almacenamiento(128)
@@ -235,6 +250,9 @@ public class OrderControllerTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private BrandRepository brandRepository;
+
         @Autowired
         private ProductImageRepository productImageRepository;
 
@@ -289,12 +307,19 @@ public class OrderControllerTest {
                 "admin123"
         );
         
+        // Crear marca para producto
+        Brand acerBrand = Brand.builder()
+                .nombre("Acer")
+                .descripcion("Acer Computers")
+                .build();
+        Brand savedAcerBrand = brandRepository.save(acerBrand);
+
         Product testProduct = Product.builder()
                 .nombre("Laptop Acer Nitro 5")
                 .descripcion("Laptop gaming con buena relacion precio-rendimiento")
                 .precio(new BigDecimal("1099.99"))
                 .stock(40)
-                .marca("Acer")
+                .brand(savedAcerBrand)
                 .procesador("Intel Core i7-11800H")
                 .ram(16)
                 .almacenamiento(512)

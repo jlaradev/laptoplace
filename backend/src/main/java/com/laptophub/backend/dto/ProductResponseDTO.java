@@ -19,7 +19,7 @@ public class ProductResponseDTO {
     private String descripcion;
     private BigDecimal precio;
     private Integer stock;
-    private String marca;
+    private BrandResponseDTO brand;
     private String procesador;
     private Integer ram;
     private Integer almacenamiento;

@@ -30,7 +30,9 @@ public class ProductCreateDTO {
     @Min(value = 0, message = "El stock no puede ser negativo")
     private Integer stock;
     
-    private String marca;
+    @NotNull(message = "El ID de marca es obligatorio")
+    private Long brandId;
+    
     private String procesador;
     private Integer ram;
     private Integer almacenamiento;

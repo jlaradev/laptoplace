@@ -33,7 +33,7 @@ public class Order {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private OrderStatus estado = OrderStatus.PENDIENTE;
+    private OrderStatus estado = OrderStatus.PENDIENTE_PAGO;
     
     @Column(columnDefinition = "TEXT", nullable = false)
     private String direccionEnvio;

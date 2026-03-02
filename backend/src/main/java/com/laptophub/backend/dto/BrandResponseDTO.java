@@ -5,18 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductListDTO {
+public class BrandResponseDTO {
     private Long id;
     private String nombre;
-    private BigDecimal precio;
-    private Integer stock;
-    private BrandResponseDTO brand;
-    private ProductImageDTO imagenPrincipal;
-    private Double promedioRating;
+    private String descripcion;
+    private String imageUrl;
+    private LocalDateTime createdAt;
 }

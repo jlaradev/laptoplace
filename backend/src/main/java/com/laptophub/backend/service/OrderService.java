@@ -148,8 +148,7 @@ public class OrderService {
     public Order cancelOrder(Long orderId) {
         Order order = findById(orderId);
         
-        boolean canCancel = order.getEstado() == OrderStatus.PENDIENTE || 
-                           order.getEstado() == OrderStatus.PENDIENTE_PAGO;
+        boolean canCancel = order.getEstado() == OrderStatus.PENDIENTE_PAGO;
         
         if (!canCancel) {
             throw new ValidationException(
@@ -202,7 +201,7 @@ public class OrderService {
         return orderRepository.findAll();
     }
     
-    private void restoreOrderStock(Order order) {
+    public void restoreOrderStock(Order order) {
         for (OrderItem item : order.getOrderItems()) {
             Product product = item.getProduct();
             product.setStock(product.getStock() + item.getCantidad());
@@ -279,5 +278,101 @@ public class OrderService {
                 .orElse(0.0);
         
         return DTOMapper.toOrderItemResponse(item, mainImage, avgRating);
+    }
+
+    /**
+     * Progresa órdenes en estado PROCESANDO a ENVIADO
+     * Se ejecuta automáticamente by scheduler cada 2 minutos
+     */
+    @Transactional
+    public int progressProcessingToShipped() {
+        logger.info("[OrderService] Buscando órdenes en estado PROCESANDO para cambiar a ENVIADO...");
+        List<Order> processingOrders = orderRepository.findByEstado(OrderStatus.PROCESANDO);
+        
+        int count = 0;
+        for (Order order : processingOrders) {
+            order.setEstado(OrderStatus.ENVIADO);
+            orderRepository.save(order);
+            logger.info("[OrderService] Orden {} movida a ENVIADO", order.getId());
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * Progresa órdenes en estado ENVIADO a ENTREGADO
+     * Se ejecuta automáticamente by scheduler cada 2 minutos
+     */
+    @Transactional
+    public int progressShippedToDelivered() {
+        logger.info("[OrderService] Buscando órdenes en estado ENVIADO para cambiar a ENTREGADO...");
+        List<Order> shippedOrders = orderRepository.findByEstado(OrderStatus.ENVIADO);
+        
+        int count = 0;
+        for (Order order : shippedOrders) {
+            order.setEstado(OrderStatus.ENTREGADO);
+            orderRepository.save(order);
+            logger.info("[OrderService] Orden {} movida a ENTREGADO", order.getId());
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * Cambia una orden específica de PROCESANDO a ENVIADO (Endpoint admin)
+     */
+    @Transactional
+    public Order shipOrder(Long orderId) {
+        Order order = findById(orderId);
+        
+        if (order.getEstado() != OrderStatus.PROCESANDO) {
+            throw new ValidationException(
+                "La orden no puede ser enviada. Estado actual: " + order.getEstado().getValue() +
+                ". Solo se pueden enviar órdenes en estado PROCESANDO."
+            );
+        }
+        
+        order.setEstado(OrderStatus.ENVIADO);
+        Order updated = orderRepository.save(order);
+        logger.info("[OrderService] Orden {} cambió a ENVIADO por acción admin", orderId);
+        return updated;
+    }
+
+    /**
+     * Cambia una orden específica de PROCESANDO a ENVIADO (DTO version)
+     */
+    @Transactional
+    public OrderResponseDTO shipOrderDTO(Long orderId) {
+        Order order = shipOrder(orderId);
+        return mapOrderToDTO(order);
+    }
+
+    /**
+     * Cambia una orden específica de ENVIADO a ENTREGADO (Endpoint admin)
+     */
+    @Transactional
+    public Order deliverOrder(Long orderId) {
+        Order order = findById(orderId);
+        
+        if (order.getEstado() != OrderStatus.ENVIADO) {
+            throw new ValidationException(
+                "La orden no puede ser entregada. Estado actual: " + order.getEstado().getValue() +
+                ". Solo se pueden entregar órdenes en estado ENVIADO."
+            );
+        }
+        
+        order.setEstado(OrderStatus.ENTREGADO);
+        Order updated = orderRepository.save(order);
+        logger.info("[OrderService] Orden {} cambió a ENTREGADO por acción admin", orderId);
+        return updated;
+    }
+
+    /**
+     * Cambia una orden específica de ENVIADO a ENTREGADO (DTO version)
+     */
+    @Transactional
+    public OrderResponseDTO deliverOrderDTO(Long orderId) {
+        Order order = deliverOrder(orderId);
+        return mapOrderToDTO(order);
     }
 }

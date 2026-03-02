@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.dto.CreateOrderDTO;
 import com.laptophub.backend.dto.CreatePaymentDTO;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.OrderStatus;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.model.User;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
@@ -63,7 +65,7 @@ public class PaymentControllerTest {
 
         Order order = Order.builder()
                 .user(user)
-                .estado(OrderStatus.PENDIENTE)
+                .estado(OrderStatus.PENDIENTE_PAGO)
                 .total(new BigDecimal("100.00"))
                 .direccionEnvio("Calle Stripe 123")
                 .build();
@@ -121,6 +123,9 @@ public class PaymentControllerTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private BrandRepository brandRepository;
+
         @Autowired
         private ProductImageRepository productImageRepository;
 
@@ -175,13 +180,20 @@ public class PaymentControllerTest {
                 "admin123"
         );
         
+        // Crear marca para producto
+        Brand msiBrand = Brand.builder()
+                .nombre("MSI")
+                .descripcion("MSI - Gaming")
+                .build();
+        Brand savedMsiBrand = brandRepository.save(msiBrand);
+
         // Crear producto
         Product testProduct = Product.builder()
                 .nombre("Laptop MSI GS66 Stealth")
                 .descripcion("Laptop gaming ultra portátil")
                 .precio(new BigDecimal("1899.99"))
                 .stock(20)
-                .marca("MSI")
+                .brand(savedMsiBrand)
                 .procesador("Intel Core i9-11980HK")
                 .ram(32)
                 .almacenamiento(1024)
@@ -480,7 +492,7 @@ public class PaymentControllerTest {
 
         Order order = Order.builder()
                 .user(user)
-                .estado(OrderStatus.PENDIENTE)
+                .estado(OrderStatus.PENDIENTE_PAGO)
                 .total(new BigDecimal("100.00"))
                 .direccionEnvio("Calle Mismatch 999")
                 .build();

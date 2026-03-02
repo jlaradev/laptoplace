@@ -5,8 +5,10 @@ import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.dto.CreateReviewDTO;
 import com.laptophub.backend.exception.ApiResponse;
 import com.laptophub.backend.exception.GlobalExceptionHandler;
+import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.User;
+import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
 import com.laptophub.backend.support.TestAuthHelper;
@@ -50,6 +52,9 @@ public class ExceptionHandlingIntegrationTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private BrandRepository brandRepository;
+
         @Autowired
         private PasswordEncoder passwordEncoder;
 
@@ -61,6 +66,10 @@ public class ExceptionHandlingIntegrationTest {
     @BeforeEach
     @SuppressWarnings("null")
         public void setup() throws Exception {
+        // Limpiar datos previos para evitar conflictos de constrainta única
+        productRepository.deleteAll();
+        brandRepository.deleteAll();
+        
         AuthInfo authInfo = TestAuthHelper.registerAndLogin(
                 mockMvc,
                 objectMapper,
@@ -81,12 +90,19 @@ public class ExceptionHandlingIntegrationTest {
                 "admin123"
         );
 
+        // Crear marca primero
+        Brand testBrand = Brand.builder()
+                .nombre("TestBrand")
+                .descripcion("Test Brand")
+                .build();
+        Brand savedBrand = brandRepository.save(testBrand);
+
         testProduct = Product.builder()
                 .nombre("Test Product")
                 .descripcion("Test Description")
                 .precio(BigDecimal.valueOf(999.99))
                 .stock(10)
-                .marca("TestBrand")
+                .brand(savedBrand)
                 .build();
         productRepository.save(testProduct);
     }

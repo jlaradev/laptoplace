@@ -25,6 +25,7 @@ public class StripeWebhookController {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final com.laptophub.backend.service.OrderService orderService;
 
     @Value("${stripe.webhook.secret}")
     private String stripeWebhookSecret;
@@ -64,6 +65,7 @@ public class StripeWebhookController {
                 } else {
                     payment.setEstado(PaymentStatus.FALLIDO);
                     order.setEstado(OrderStatus.CANCELADO);
+                    orderService.restoreOrderStock(order);
                 }
 
                 paymentRepository.save(payment);

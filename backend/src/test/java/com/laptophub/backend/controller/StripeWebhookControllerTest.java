@@ -92,7 +92,7 @@ public class StripeWebhookControllerTest {
     @BeforeEach
     public void setUp() {
         order = new Order();
-        order.setEstado(OrderStatus.PENDIENTE);
+        order.setEstado(OrderStatus.PENDIENTE_PAGO);
         payment = new Payment();
         payment.setStripePaymentId("pi_test");
         payment.setEstado(PaymentStatus.PENDIENTE);

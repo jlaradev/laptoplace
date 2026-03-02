@@ -13,7 +13,6 @@ public class OrderExpirationScheduler {
     private static final Logger logger = LoggerFactory.getLogger(OrderExpirationScheduler.class);
     private final OrderService orderService;
 
-    // Ejecuta cada 5 minutos
     @Scheduled(cron = "0 */5 * * * *")
     public void expirePendingOrders() {
         logger.info("[OrderExpirationScheduler] Ejecutando expiración de órdenes pendientes...");

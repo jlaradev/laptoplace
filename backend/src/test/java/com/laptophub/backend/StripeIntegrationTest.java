@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests para Stripe integration
  */
 @SpringBootTest
+@ActiveProfiles("test")
 public class StripeIntegrationTest {
 
     @Autowired
@@ -53,7 +55,7 @@ public class StripeIntegrationTest {
         // Crear orden de prueba
         testOrder = Order.builder()
                 .user(testUser)
-                .estado(OrderStatus.PENDIENTE)
+                .estado(OrderStatus.PENDIENTE_PAGO)
                 .createdAt(LocalDateTime.now())
                 .total(BigDecimal.valueOf(99.99))
                 .direccionEnvio("Calle Test 123, Test City 12345")
@@ -139,7 +141,7 @@ public class StripeIntegrationTest {
         @SuppressWarnings("null")
         Order testOrder2 = Order.builder()
                 .user(testUser)
-                .estado(OrderStatus.PENDIENTE)
+                .estado(OrderStatus.PENDIENTE_PAGO)
                 .createdAt(LocalDateTime.now())
             .total(BigDecimal.valueOf(79.99))
                 .direccionEnvio("Calle Test 456, Test City 67890")
