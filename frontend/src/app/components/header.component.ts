@@ -59,6 +59,7 @@ import { UserService, User } from '../services/user.service';
             </button>
             <div *ngIf="showUserDropdown" class="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
               <button (click)="goToProfile()" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-700 font-semibold">Mi perfil</button>
+              <button (click)="goToOrders()" class="w-full text-left px-4 py-2 hover:bg-blue-50 text-blue-700 font-semibold">Mis pedidos</button>
               <button (click)="logout()" class="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 font-semibold">Cerrar sesión</button>
             </div>
           </div>
@@ -229,6 +230,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   goToLogin() {
     this.router.navigate(['/login'], { queryParams: { redirect: this.router.url } });
+  }
+
+  goToOrders() {
+    this.router.navigate(['/orders']);
+    this.showUserDropdown = false;
   }
 
   logout() {

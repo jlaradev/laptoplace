@@ -93,7 +93,7 @@ export class PaymentComponent implements OnInit {
       this.error = 'No hay usuario autenticado.';
       return;
     }
-    // No activar loading aquí, solo al confirmar pago
+    this.loading = true;
     const orderPayload = { direccionEnvio: this.direccionEnvio };
     this.orderService.createOrderFromCart(this.userId, orderPayload).subscribe({
       next: (orderResp) => {
@@ -105,7 +105,7 @@ export class PaymentComponent implements OnInit {
           setTimeout(() => {
             this.setupPaymentElement();
             this.loading = false;
-          }, 0);
+          }, 100);
         } else {
           this.error = 'No se pudo obtener el clientSecret del pago.';
           this.loading = false;

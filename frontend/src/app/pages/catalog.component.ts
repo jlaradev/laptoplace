@@ -7,8 +7,10 @@ import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 import { ProductCardComponent } from '../components/product-card.component';
 import { ProductService } from '../services/product.service';
+import { BrandService } from '../services/brand.service';
 import { AuthService } from '../services/auth.service';
 import { Product } from '../models/product.model';
+import { Brand } from '../models/brand.model';
 
 @Component({
   selector: 'app-catalog',
@@ -33,33 +35,54 @@ import { Product } from '../models/product.model';
           </form>
           <button (click)="clearFilters()" class="mb-6 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition w-full">Limpiar filtros</button>
           <h2 class="text-lg font-bold mb-4">Filtrar por marca</h2>
-          <div *ngFor="let brand of brands">
-            <label class="flex items-center gap-2 mb-2">
-              <input type="checkbox" [(ngModel)]="brand.selected" (change)="onBrandChange()" />
-              <span>{{ brand.name }}</span>
-            </label>
-          </div>
+          <select 
+            [(ngModel)]="selectedBrandId"
+            (change)="onBrandChange()"
+            name="brand"
+            class="w-full px-3 py-2 border border-slate-300 rounded-lg font-medium bg-white">
+            <option value="">Todas las marcas</option>
+            <option *ngFor="let brand of allBrands()" [value]="brand.id">
+              {{ brand.nombre }}
+            </option>
+          </select>
         </aside>
         <!-- Main Content -->
         <section class="flex-1 p-6 min-h-screen">
           <!-- Saludo movido al header -->
           <h1 class="text-2xl font-bold mb-6">Catálogo completo</h1>
+          
+          <!-- Sort Dropdown -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2">Ordenar por:</label>
+            <select 
+              (change)="onSortSelectChange($event)"
+              [value]="0"
+              class="w-full px-4 py-2 border border-slate-300 rounded-lg font-medium bg-white hover:border-slate-400 transition">
+              <option *ngFor="let option of sortOptions; let i = index" [value]="i">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+
           <!-- Loader centrado solo si no hay productos -->
-          <div *ngIf="loading() && filteredProducts().length === 0" class="flex flex-col items-center justify-center w-full min-h-40 mb-8">
+          <div *ngIf="loading() && products().length === 0" class="flex flex-col items-center justify-center w-full min-h-40 mb-8">
             <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
             <span class="text-blue-700 font-semibold text-lg">Cargando productos...</span>
           </div>
-          <ng-container *ngIf="filteredProducts().length > 0">
+          <ng-container *ngIf="products().length > 0">
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <app-product-card *ngFor="let product of filteredProducts()" [product]="product"></app-product-card>
+              <app-product-card *ngFor="let product of products()" [product]="product"></app-product-card>
             </div>
             <!-- Loader pequeño debajo de productos al paginar -->
-            <div *ngIf="loading() && filteredProducts().length > 0" class="flex flex-col items-center justify-center w-full min-h-20 my-8">
+            <div *ngIf="loading() && products().length > 0" class="flex flex-col items-center justify-center w-full min-h-20 my-8">
               <div class="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
               <span class="text-blue-700 font-semibold text-base">Cargando más productos...</span>
             </div>
           </ng-container>
-          <div class="flex justify-center mt-8" *ngIf="!isLastPage && !loading() && filteredProducts().length > 0">
+          <div *ngIf="!loading() && products().length === 0" class="col-span-full text-center py-12 w-full">
+            <p class="text-gray-500 text-lg">No se encontraron productos que coincidan con tu búsqueda</p>
+          </div>
+          <div class="flex justify-center mt-8" *ngIf="!isLastPage && !loading() && products().length > 0">
             <button (click)="loadMore()" class="px-6 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
               Cargar más
             </button>
@@ -75,22 +98,25 @@ import { Product } from '../models/product.model';
 })
 export class CatalogComponent {
   private productService = inject(ProductService);
+  private brandService = inject(BrandService);
   products = signal<Product[]>([]);
+  allBrands = signal<Brand[]>([]);
   loading = signal(false);
   page = 0;
   isLastPage = false;
   isLoggedIn = signal(false);
   private apiSub: Subscription | null = null;
   private authService = inject(AuthService);
-  brands = [
-    { name: 'HP', selected: false },
-    { name: 'Dell', selected: false },
-    { name: 'Lenovo', selected: false },
-    { name: 'ASUS', selected: false },
-    { name: 'Acer', selected: false },
-    { name: 'Apple', selected: false },
-    { name: 'MSI', selected: false },
-    { name: 'Samsung', selected: false }
+  sortBy = signal<string>('createdAt');
+  sortDirection = signal<string>('desc');
+  selectedBrandId: string | number | null = "";
+  sortOptions = [
+    { value: 'createdAt', label: 'Más nuevos', direction: 'desc' },
+    { value: 'rating', label: 'Mejor valorados', direction: 'desc' },
+    { value: 'price', label: 'Precio: menor a mayor', direction: 'asc' },
+    { value: 'price', label: 'Precio: mayor a menor', direction: 'desc' },
+    { value: 'name', label: 'Alfabéticamente A-Z', direction: 'asc' },
+    { value: 'name', label: 'Alfabéticamente Z-A', direction: 'desc' }
   ];
   search = '';
   searchTerm = '';
@@ -100,12 +126,22 @@ export class CatalogComponent {
     this.isLoggedIn.set(this.authService.isLoggedInSync());
     this.userEmail = this.authService.getUserEmail();
 
-    // Leer query param 'brand' y seleccionar la marca si existe
+    // Cargar marcas de la BD
+    this.brandService.getAllBrands().subscribe({
+      next: (brands) => {
+        this.allBrands.set(brands);
+      },
+      error: (err) => {
+        console.error('Error loading brands:', err);
+      }
+    });
+
+    // Leer query param 'brandId' y seleccionar la marca si existe
     const route = inject(ActivatedRoute);
     route.queryParams.subscribe(params => {
-      const brandParam = params['brand'];
-      if (brandParam) {
-        this.brands.forEach(b => b.selected = b.name.toLowerCase() === brandParam.toLowerCase());
+      const brandIdParam = params['brandId'];
+      if (brandIdParam) {
+        this.selectedBrandId = parseInt(brandIdParam);
       }
       this.loadProducts(true);
     });
@@ -116,11 +152,6 @@ export class CatalogComponent {
     window.location.reload();
   }
 
-  get selectedBrand(): string | null {
-    const selected = this.brands.find(b => b.selected);
-    return selected ? selected.name : null;
-  }
-
   onSearch() {
     this.searchTerm = this.search.trim();
     this.page = 0;
@@ -129,10 +160,27 @@ export class CatalogComponent {
     this.loadProducts(true);
   }
 
+  onSortChange(option: { value: string; label: string; direction: string }) {
+    this.sortBy.set(option.value);
+    this.sortDirection.set(option.direction);
+    this.page = 0;
+    this.products.set([]);
+    this.isLastPage = false;
+    this.loadProducts(true);
+  }
+
+  onSortSelectChange(event: any) {
+    const index = parseInt(event.target.value);
+    const option = this.sortOptions[index];
+    this.onSortChange(option);
+  }
+
   clearFilters() {
     this.search = '';
     this.searchTerm = '';
-    this.brands.forEach(b => b.selected = false);
+    this.selectedBrandId = "";
+    this.sortBy.set('createdAt');
+    this.sortDirection.set('desc');
     this.page = 0;
     this.products.set([]);
     this.isLastPage = false;
@@ -157,31 +205,30 @@ export class CatalogComponent {
     if (this.apiSub) {
       this.apiSub.unsubscribe();
     }
-    let obs;
-    const selectedBrands = this.brands.filter(b => b.selected).map(b => b.name);
-    const hasBrandFilter = selectedBrands.length > 0;
+    
     const search = this.searchTerm.trim();
     const pageSize = 20;
-    if (search && selectedBrands.length === 1) {
-      // Buscar por nombre y una marca: traer todos por nombre y filtrar por marca en frontend (no hay endpoint combinado)
-      obs = this.productService.searchByName(search, this.page, pageSize);
-    } else if (search) {
-      // Buscar por nombre y varias marcas: traer por nombre y filtrar en frontend
-      obs = this.productService.searchByName(search, this.page, pageSize);
-    } else if (selectedBrands.length === 1) {
-      // Solo una marca: usar endpoint backend con paginación real
-      obs = this.productService.findByBrand(selectedBrands[0], this.page, pageSize);
-    } else {
-      // Sin marcas o varias marcas: traer todos y filtrar en frontend
-      obs = this.productService.getProducts(this.page, pageSize);
+
+    // Construir opciones de búsqueda dinámicamente
+    const searchOptions: any = {
+      sortBy: this.sortBy(),
+      sort: this.sortDirection(),
+      page: this.page,
+      size: pageSize
+    };
+
+    if (search) {
+      searchOptions.nombre = search;
     }
-    this.apiSub = obs.subscribe(page => {
+
+    if (this.selectedBrandId && this.selectedBrandId !== "") {
+      searchOptions.brandId = Number(this.selectedBrandId);
+    }
+
+    // Usar el nuevo método search unificado
+    this.apiSub = this.productService.search(searchOptions).subscribe(page => {
       let content = page.content;
-      const selectedBrandsLower = this.brands.filter(b => b.selected).map(b => b.name.toLowerCase());
-      // Si hay más de una marca seleccionada, filtrar en frontend
-      if (selectedBrandsLower.length > 1) {
-        content = content.filter(p => selectedBrandsLower.includes((p.marca || '').toLowerCase()));
-      }
+      
       if (reset) {
         this.products.set(content);
       } else {
@@ -191,28 +238,4 @@ export class CatalogComponent {
       this.loading.set(false);
     });
   }
-
-  updateFilters() {
-    // Trigger Angular change detection
-    this.products.set([...this.products()]);
-  }
-
-  filteredProducts() {
-    let filtered = this.products();
-    const selectedBrands = this.brands.filter(b => b.selected).map(b => b.name.toLowerCase());
-    const hasBrandFilter = selectedBrands.length > 0;
-    const hasSearch = this.searchTerm.length > 0;
-    const searchTerm = this.searchTerm.toLowerCase();
-
-    // Filtrar por marca SIEMPRE que se seleccione una marca
-    if (hasBrandFilter) {
-      filtered = filtered.filter(p => selectedBrands.includes((p.marca || '').toLowerCase()));
-    }
-    // Filtrar por nombre SOLO si se ha pulsado Buscar
-    if (hasSearch) {
-      filtered = filtered.filter(p => (p.nombre || '').toLowerCase().includes(searchTerm));
-    }
-    return filtered;
-  }
-
 }

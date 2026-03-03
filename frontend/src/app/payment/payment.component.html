@@ -29,19 +29,40 @@
           <!-- Dirección de entrega -->
           <div *ngIf="userLoaded && !direccionConfirmada">
             <label class="block font-semibold mb-2">Dirección de entrega</label>
-            <div *ngIf="!mostrarFormularioDireccion">
-              <div class="mb-2">{{ direccionEnvio || 'No disponible' }}</div>
-                <button class="px-4 py-1 payment-btn-gray mr-2" (click)="usarOtraDireccion()">Usar otra dirección</button>
-              <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio || loading">
+            
+            <!-- Si NO hay dirección: campo de entrada obligatorio -->
+            <div *ngIf="!direccionUsuario">
+              <input 
+                class="border rounded px-3 py-2 w-full mb-2" 
+                [(ngModel)]="direccionEnvio" 
+                placeholder="Ingresa tu dirección de entrega"
+                name="nuevaDireccion"
+              />
+              <button 
+                class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" 
+                (click)="iniciarPago()" 
+                [disabled]="!direccionEnvio || loading"
+              >
                 {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
               </button>
             </div>
-            <div *ngIf="mostrarFormularioDireccion">
-              <input class="border rounded px-3 py-2 w-full mb-2" [(ngModel)]="direccionEnvio" placeholder="Ingresa nueva dirección" />
+            
+            <!-- Si YA hay dirección: mostrar y permitir cambiarla -->
+            <div *ngIf="direccionUsuario">
+              <div *ngIf="!mostrarFormularioDireccion">
+                <div class="mb-2">{{ direccionEnvio }}</div>
+                <button class="px-4 py-1 payment-btn-gray mr-2" (click)="usarOtraDireccion()">Usar otra dirección</button>
+                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio || loading">
+                  {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
+                </button>
+              </div>
+              <div *ngIf="mostrarFormularioDireccion">
+                <input class="border rounded px-3 py-2 w-full mb-2" [(ngModel)]="direccionEnvio" placeholder="Ingresa nueva dirección" name="otraDireccion" />
                 <button class="px-4 py-1 payment-btn-gray mr-2" (click)="cancelarOtraDireccion()">Cancelar</button>
-              <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio || loading">
-                {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
-              </button>
+                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio || loading">
+                  {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
+                </button>
+              </div>
             </div>
           </div>
           <!-- Stripe Elements: siempre presente, pero oculto si no está confirmada la dirección -->
