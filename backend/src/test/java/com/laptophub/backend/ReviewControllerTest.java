@@ -8,6 +8,9 @@ import com.laptophub.backend.repository.BrandRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.repository.OrderRepository;
+import com.laptophub.backend.repository.OrderItemRepository;
+import com.laptophub.backend.repository.PaymentRepository;
 import com.laptophub.backend.support.TestAuthHelper;
 import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
 import org.junit.jupiter.api.Test;
@@ -56,6 +59,15 @@ public class ReviewControllerTest {
     @Autowired
     private BrandRepository brandRepository;
 
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
     private static String userId;
     private static String productId;
     private static String reviewId;
@@ -79,6 +91,9 @@ public class ReviewControllerTest {
     @SuppressWarnings("null")
     public void test1_SetupUserAndProduct() throws Exception {
         // Limpiar BD solo antes del primer test
+        orderItemRepository.deleteAll();
+        paymentRepository.deleteAll();
+        orderRepository.deleteAll();
         reviewRepository.deleteAll();
         userRepository.deleteAll();
         
@@ -94,6 +109,7 @@ public class ReviewControllerTest {
         );
         userId = authInfo.getUserId();
         userToken = authInfo.getToken();
+        com.laptophub.backend.model.User user = userRepository.findById(java.util.UUID.fromString(userId)).orElseThrow();
         
         // Crear marca primero
         Brand asusBrand = Brand.builder()
@@ -120,8 +136,28 @@ public class ReviewControllerTest {
         Product savedProduct = productRepository.save(testProduct);
         productId = savedProduct.getId().toString();
         
+        // IMPORTANTE: Crear una orden entregada para que el usuario haya "comprado" el producto
+        com.laptophub.backend.model.Order order = com.laptophub.backend.model.Order.builder()
+                .user(user)
+                .estado(com.laptophub.backend.model.OrderStatus.ENTREGADO)
+                .direccionEnvio("Calle Test 123")
+                .total(new BigDecimal("1499.99"))
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+        com.laptophub.backend.model.Order savedOrder = orderRepository.save(order);
+        
+        // Crear el OrderItem
+        com.laptophub.backend.model.OrderItem orderItem = com.laptophub.backend.model.OrderItem.builder()
+                .order(savedOrder)
+                .product(savedProduct)
+                .cantidad(1)
+                .precioUnitario(new BigDecimal("1499.99"))
+                .build();
+        orderItemRepository.save(orderItem);
+        
         System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId);
-        System.out.println("✅ Producto creado con ID: " + productId + "\n");
+        System.out.println("✅ Producto creado con ID: " + productId);
+        System.out.println("✅ Orden entregada creada - Usuario ha \"comprado\" el producto\n");
     }
 
     /**
@@ -289,5 +325,45 @@ public class ReviewControllerTest {
         System.out.println("📋 Verifica en tu gestor de BD:");
         System.out.println("   - Review del usuario: " + UNIQUE_EMAIL);
         System.out.println("   - Review con rating 5 y comentario final\n");
+    }
+
+    /**
+     * TEST 9: Intentar crear review sin comprar el producto (debe fallar con 403)
+     */
+    @Test
+    @Order(9)
+    public void test9_CreateReviewWithoutPurchase() throws Exception {
+        System.out.println("\n=== TEST 9: Intentar crear review sin comprar el producto ===");
+        
+        // Crear nuevo usuario que NO ha comprado el producto
+        String nonBuyerEmail = "non.buyer." + System.currentTimeMillis() + "@laptophub.com";
+        AuthInfo nonBuyerAuth = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                nonBuyerEmail,
+                "password123",
+                "Non",
+                "Buyer"
+        );
+        String nonBuyerUserId = nonBuyerAuth.getUserId();
+        String nonBuyerToken = nonBuyerAuth.getToken();
+        
+        // Intentar crear review sin haber comprado
+        CreateReviewDTO reviewDTO = CreateReviewDTO.builder()
+                .productId(Long.parseLong(productId))
+                .rating(3)
+                .comentario("Intento de reseña sin compra")
+                .build();
+        
+        mockMvc.perform(post("/api/reviews")
+                        .header("Authorization", "Bearer " + nonBuyerToken)
+                        .param("userId", nonBuyerUserId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewDTO)))
+                .andDo(print())
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("No puedes reseñar un producto que no has comprado"));
+        
+        System.out.println("✅ TEST 9 PASÓ: Validación de compra funcionando correctamente\n");
     }
 }

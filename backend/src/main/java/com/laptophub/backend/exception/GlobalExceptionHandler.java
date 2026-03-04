@@ -71,6 +71,20 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .build());
     }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiResponse<?>> handleForbidden(
+            ForbiddenException e,
+            HttpServletRequest request) {
+        return ResponseEntity.status(403)
+            .body(ApiResponse.builder()
+                .success(false)
+                .message(e.getMessage())
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .build());
+    }
     
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiResponse<?>> handleValidation(

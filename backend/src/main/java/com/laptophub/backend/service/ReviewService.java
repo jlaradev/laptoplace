@@ -10,6 +10,7 @@ import com.laptophub.backend.model.Review;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.exception.ConflictException;
+import com.laptophub.backend.exception.ForbiddenException;
 import com.laptophub.backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,12 +30,17 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final UserService userService;
     private final ProductService productService;
+    private final OrderService orderService;
     
     @Transactional
     @SuppressWarnings("null")
     public ReviewResponseDTO createReview(CreateReviewDTO dto, UUID userId) {
         User user = userService.findById(userId);
         Product product = productService.findById(dto.getProductId());
+        
+        if (!orderService.isProductPurchasedByUser(userId, product.getId())) {
+            throw new ForbiddenException("No puedes reseñar un producto que no has comprado");
+        }
         
         Optional<Review> existingReview = reviewRepository.findByProductAndUser(product, user);
         if (existingReview.isPresent()) {

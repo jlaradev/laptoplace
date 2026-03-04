@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -374,5 +375,51 @@ public class OrderService {
     public OrderResponseDTO deliverOrderDTO(Long orderId) {
         Order order = deliverOrder(orderId);
         return mapOrderToDTO(order);
+    }
+
+    /**
+     * Verifica si un usuario ha comprado un producto específico.
+     * @param userId ID del usuario
+     * @param productId ID del producto
+     * @return true si el usuario ha comprado el producto, false en caso contrario
+     */
+    @Transactional(readOnly = true)
+    public boolean isProductPurchasedByUser(UUID userId, Long productId) {
+        return orderRepository.hasUserPurchasedProduct(userId, productId);
+    }
+
+    /**
+     * Obtiene los productos que un usuario puede reseñar (paginados).
+     * Solo retorna productos asociados a órdenes con estado ENTREGADO.
+     * @param userId ID del usuario
+     * @param pageable Información de paginación
+     * @return Página de productos reseñables con información sobre reseñas existentes
+     */
+    @Transactional(readOnly = true)
+    public Page<ReviewableProductDTO> getReviewableProducts(UUID userId, @NonNull Pageable pageable) {
+        List<ReviewableProductDTO> allProducts = orderRepository.getReviewableProducts(userId);
+        
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), allProducts.size());
+        
+        List<ReviewableProductDTO> pageContent = new ArrayList<>(allProducts.subList(start, Math.max(start, end)));
+        
+        return new org.springframework.data.domain.PageImpl<>(
+            pageContent,
+            pageable,
+            allProducts.size()
+        );
+    }
+
+    /**
+     * Obtiene todas las órdenes activas de un usuario (PROCESANDO, ENVIADO, ENTREGADO) con paginación.
+     * @param userId ID del usuario
+     * @param pageable Información de paginación
+     * @return Página de órdenes en estados activos
+     */
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> getUserActiveOrders(UUID userId, @NonNull Pageable pageable) {
+        return orderRepository.findUserOrdersByActiveStatuses(userId, pageable)
+            .map(this::mapOrderToDTO);
     }
 }

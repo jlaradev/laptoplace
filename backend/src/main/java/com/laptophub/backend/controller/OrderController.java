@@ -2,6 +2,8 @@ package com.laptophub.backend.controller;
 
 import com.laptophub.backend.dto.CreateOrderDTO;
 import com.laptophub.backend.dto.OrderResponseDTO;
+import com.laptophub.backend.dto.PurchasedResponseDTO;
+import com.laptophub.backend.dto.ReviewableProductDTO;
 import com.laptophub.backend.model.OrderStatus;
 import com.laptophub.backend.service.OrderService;
 import jakarta.validation.Valid;
@@ -64,5 +66,52 @@ public class OrderController {
     @PostMapping("/expire")
     public int expirePending() {
         return orderService.expirePendingPaymentOrders();
+    }
+
+    /**
+     * Verifica si un usuario ha comprado un producto específico.
+     * @param userId ID del usuario
+     * @param productId ID del producto
+     * @return Response con boolean indicando si el producto fue comprado
+     */
+    @GetMapping("/user/{userId}/product/{productId}/purchased")
+    public PurchasedResponseDTO checkProductPurchased(
+            @PathVariable UUID userId,
+            @PathVariable Long productId
+    ) {
+        boolean purchased = orderService.isProductPurchasedByUser(userId, productId);
+        return PurchasedResponseDTO.builder()
+                .purchased(purchased)
+                .build();
+    }
+
+    /**
+     * Obtiene los productos que un usuario puede reseñar.
+     * Solo retorna productos de órdenes con estado ENTREGADO.
+     * @param userId ID del usuario
+     * @param pageable Información de paginación (página y tamaño)
+     * @return Página de productos reseñables con estado de reseña
+     */
+    @GetMapping("/user/{userId}/reviewable-products")
+    public Page<ReviewableProductDTO> getReviewableProducts(
+            @PathVariable UUID userId,
+            @NonNull Pageable pageable
+    ) {
+        return orderService.getReviewableProducts(userId, pageable);
+    }
+
+    /**
+     * Obtiene todas las órdenes activas de un usuario (PROCESANDO, ENVIADO, ENTREGADO).
+     * Incluye información detallada de los items y pagos.
+     * @param userId ID del usuario
+     * @param pageable Información de paginación (página y tamaño)
+     * @return Página de órdenes en estados activos
+     */
+    @GetMapping("/user/{userId}/active")
+    public Page<OrderResponseDTO> getUserActiveOrders(
+            @PathVariable UUID userId,
+            @NonNull Pageable pageable
+    ) {
+        return orderService.getUserActiveOrders(userId, pageable);
     }
 }

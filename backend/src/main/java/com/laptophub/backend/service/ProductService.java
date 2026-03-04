@@ -158,27 +158,7 @@ public class ProductService {
         Double avgRating = getAverageRatingForProduct(id);
         return DTOMapper.toProductResponse(product, images, reviews, avgRating);
     }
-    
-    @Transactional(readOnly = true)
-    public Page<ProductListDTO> searchByName(String nombre, @NonNull Pageable pageable) {
-        return productRepository.findByNombreContainingIgnoreCase(nombre, pageable).map(product -> {
-            List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(product.getId());
-            ProductImage mainImage = images.isEmpty() ? null : images.get(0);
-            Double avgRating = getAverageRatingForProduct(product.getId());
-            return DTOMapper.toProductListDTO(product, mainImage, avgRating);
-        });
-    }
-    
-    @Transactional(readOnly = true)
-    public Page<ProductListDTO> findByBrand(Long brandId, @NonNull Pageable pageable) {
-        return productRepository.findByBrand_Id(brandId, pageable).map(product -> {
-            List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(product.getId());
-            ProductImage mainImage = images.isEmpty() ? null : images.get(0);
-            Double avgRating = getAverageRatingForProduct(product.getId());
-            return DTOMapper.toProductListDTO(product, mainImage, avgRating);
-        });
-    }
-    
+
     @Transactional
     @SuppressWarnings("null")
     public ProductResponseDTO createProduct(ProductCreateDTO dto) {

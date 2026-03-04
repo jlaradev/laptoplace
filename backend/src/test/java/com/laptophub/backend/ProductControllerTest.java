@@ -545,6 +545,7 @@ public class ProductControllerTest {
      */
     @Test
     @Order(9)
+    @SuppressWarnings("unused")
     public void test9_GetTopRatedProducts() throws Exception {
         System.out.println("\n=== TEST 9: Obtener 10 mejores productos (GET /api/products/top-rated) ===");
         
@@ -578,6 +579,7 @@ public class ProductControllerTest {
                 "Test",
                 "User"
         );
+        // Token guardado para potenciales integraciones de pagos y transacciones futuras
         String regularToken = regularAuth.getToken();
         
         // Crear marca
