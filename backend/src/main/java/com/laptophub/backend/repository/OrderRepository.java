@@ -83,6 +83,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @return Página de órdenes en los estados especificados
      */
     @EntityGraph(attributePaths = {"orderItems", "orderItems.product", "payment"})
-    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.estado IN ('PROCESANDO', 'ENVIADO', 'ENTREGADO')")
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId AND o.estado IN ('PROCESANDO', 'ENVIADO', 'ENTREGADO') ORDER BY o.createdAt DESC")
     Page<Order> findUserOrdersByActiveStatuses(@Param("userId") UUID userId, Pageable pageable);
 }
