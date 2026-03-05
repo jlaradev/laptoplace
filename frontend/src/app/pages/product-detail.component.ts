@@ -7,14 +7,17 @@ import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 import { CartService } from '../services/cart.service';
 import { AuthService } from '../services/auth.service';
+import { OrderService } from '../services/order.service';
+import { ReviewService } from '../services/review.service';
 import { signal } from '@angular/core';
 import { map, catchError } from 'rxjs/operators';
 import { of, Observable } from 'rxjs';
+import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, HeaderComponent, FooterComponent],
+  imports: [CommonModule, HeaderComponent, FooterComponent, RoundDecimalPipe],
   template: `
     <div class="flex flex-col min-h-screen bg-white">
       <!-- Header -->
@@ -75,7 +78,7 @@ import { of, Observable } from 'rxjs';
                     <ng-container *ngIf="product.resenas && product.resenas.length > 0; else noRating">
                       <span class="flex items-center space-x-2">
                         <span class="text-yellow-500 text-2xl">&#9733;</span>
-                        <span class="font-bold text-xl">{{ product.promedioRating }}</span>
+                        <span class="font-bold text-xl">{{ product.promedioRating | roundDecimal: 1 }}</span>
                         <span class="text-gray-500">/ 5</span>
                       </span>
                     </ng-container>
@@ -136,7 +139,22 @@ import { of, Observable } from 'rxjs';
             </div>
             <!-- Reseñas -->
             <div class="mt-10 bg-white rounded-lg shadow p-6">
-              <h3 class="text-xl font-bold mb-4 text-blue-800">Reseñas de usuarios</h3>
+              <div class="flex justify-between items-center mb-4 h-10">
+                <h3 class="text-xl font-bold text-blue-800">Reseñas de usuarios</h3>
+                <div class="flex gap-4 items-center">
+                  <div *ngIf="userHasPurchased()" class="text-sm text-gray-700 font-medium">
+                    <span *ngIf="!userHasReview()">Ya has comprado este producto</span>
+                    <span *ngIf="userHasReview()">Ya has opinado sobre este producto</span>
+                  </div>
+                  <button 
+                    *ngIf="userHasPurchased()"
+                    (click)="router.navigate(['/product', product.id, 'review'], { queryParams: { reviewId: existingReviewId() || undefined } })"
+                    class="px-6 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 transition whitespace-nowrap h-10">
+                    <span *ngIf="!userHasReview()">Opinar sobre este producto</span>
+                    <span *ngIf="userHasReview()">Actualizar mi reseña</span>
+                  </button>
+                </div>
+              </div>
               <ng-container *ngIf="product.resenas && product.resenas.length > 0; else noResenas">
                 <div class="divide-y divide-gray-200">
                   <div *ngFor="let resena of product.resenas" class="py-4">
@@ -169,12 +187,17 @@ import { of, Observable } from 'rxjs';
 export class ProductDetailComponent implements OnInit {
   private cartService = inject(CartService);
   private authService = inject(AuthService);
+  private orderService = inject(OrderService);
+  private reviewService = inject(ReviewService);
   toastMsg: string | null = null;
   toastVisible = signal<boolean>(false);
   isLoggedIn = false;
   quantity = signal<number>(1);
   isInCart = signal<boolean>(false);
   private processing = signal<boolean>(false);
+  hasPurchased = signal<boolean>(false);
+  checkingPurchase = signal<boolean>(false);
+  existingReviewId = signal<number | null>(null);
       get imagenesOrdenadas() {
         if (!this.product?.imagenes) return [];
         return [...this.product.imagenes].sort((a, b) => a.orden - b.orden);
@@ -184,7 +207,7 @@ export class ProductDetailComponent implements OnInit {
   loading = true;
   private productDetailService = inject(ProductDetailService);
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  router = inject(Router);
 
   currentImageIndex = 0;
 
@@ -199,6 +222,43 @@ export class ProductDetailComponent implements OnInit {
           console.log('Producto recibido:', data);
           this.product = data;
           this.quantity.set(1);
+          // Verificar si el usuario ha comprado este producto y si ya tiene reseña
+          if (this.isLoggedIn) {
+            const userId = localStorage.getItem('userId');
+            if (userId) {
+              this.checkingPurchase.set(true);
+              this.orderService.isProductPurchased(userId, id).subscribe({
+                next: (resp: any) => {
+                  this.hasPurchased.set(resp.purchased);
+                  // Si compró, verificar si ya tiene reseña
+                  if (resp.purchased) {
+                    this.reviewService.getUserReviewForProduct(id, userId).subscribe({
+                      next: (review: any) => {
+                        if (review && review.id) {
+                          this.existingReviewId.set(review.id);
+                        }
+                        this.checkingPurchase.set(false);
+                        this.cdr.detectChanges();
+                      },
+                      error: () => {
+                        this.existingReviewId.set(null);
+                        this.checkingPurchase.set(false);
+                        this.cdr.detectChanges();
+                      }
+                    });
+                  } else {
+                    this.checkingPurchase.set(false);
+                    this.cdr.detectChanges();
+                  }
+                },
+                error: () => {
+                  this.hasPurchased.set(false);
+                  this.checkingPurchase.set(false);
+                  this.cdr.detectChanges();
+                }
+              });
+            }
+          }
           // Esperamos a validar si el producto está en el carrito antes de mostrar
           this.checkIfInCart().subscribe({
             next: (found) => {
@@ -317,5 +377,13 @@ export class ProductDetailComponent implements OnInit {
   showNextImage() {
     if (!this.imagenesOrdenadas.length) return;
     this.currentImageIndex = (this.currentImageIndex + 1) % this.imagenesOrdenadas.length;
+  }
+
+  userHasPurchased(): boolean {
+    return this.isLoggedIn && this.hasPurchased();
+  }
+
+  userHasReview(): boolean {
+    return this.existingReviewId() !== null;
   }
 }

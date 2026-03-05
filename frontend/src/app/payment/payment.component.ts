@@ -94,7 +94,10 @@ export class PaymentComponent implements OnInit {
       return;
     }
     this.loading = true;
-    const orderPayload = { direccionEnvio: this.direccionEnvio };
+    const orderPayload = { 
+      direccionEnvio: this.direccionEnvio,
+      items: this.items
+    };
     this.orderService.createOrderFromCart(this.userId, orderPayload).subscribe({
       next: (orderResp) => {
         if (orderResp.payment && orderResp.payment.clientSecret) {

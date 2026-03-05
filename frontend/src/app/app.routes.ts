@@ -12,6 +12,8 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'catalog', component: CatalogComponent },
   { path: 'product/:id', component: ProductDetailComponent },
+  { path: 'product/:productId/review', loadComponent: () => import('./pages/create-review.component').then(m => m.CreateReviewComponent) },
+  { path: 'my-reviews', loadComponent: () => import('./pages/my-reviews.component').then(m => m.MyReviewsComponent) },
   { path: 'compare', component: CompareComponent },
   { path: 'cart', component: CartPageComponent },
   { path: 'payment', loadComponent: () => import('./payment').then(m => m.PaymentComponent) },

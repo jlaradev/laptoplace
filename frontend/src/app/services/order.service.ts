@@ -39,6 +39,21 @@ export interface OrderPage {
   size: number;
 }
 
+export interface PurchasedResponseDTO {
+  purchased: boolean;
+}
+
+export interface ReviewableProductDTO {
+  id: number;
+  nombre: string;
+  precio: number;
+  hasReview: boolean;
+  reviewId?: number | null;
+  imagenPrincipal?: {
+    url: string;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class OrderService {
   private apiUrl = (window as any).APP_CONFIG?.apiBaseUrl ? `${(window as any).APP_CONFIG.apiBaseUrl.replace(/\/$/, '')}/api/orders` : '/api/orders';
@@ -74,5 +89,32 @@ export class OrderService {
       .set('page', page.toString())
       .set('size', size.toString());
     return this.http.get<OrderPage>(`${this.apiUrl}/status/${status}`, { params });
+  }
+
+  /**
+   * Obtiene órdenes activas del usuario (PROCESANDO, ENVIADO, ENTREGADO)
+   */
+  getUserActiveOrders(userId: string, page: number = 0, size: number = 20): Observable<OrderPage> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<OrderPage>(`${this.apiUrl}/user/${userId}/active`, { params });
+  }
+
+  /**
+   * Verifica si el usuario ha comprado un producto específico
+   */
+  isProductPurchased(userId: string, productId: number): Observable<PurchasedResponseDTO> {
+    return this.http.get<PurchasedResponseDTO>(`${this.apiUrl}/user/${userId}/product/${productId}/purchased`);
+  }
+
+  /**
+   * Obtiene los productos que un usuario puede reseñar
+   */
+  getReviewableProducts(userId: string, page: number = 0, size: number = 20): Observable<any> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<any>(`${this.apiUrl}/user/${userId}/reviewable-products`, { params });
   }
 }

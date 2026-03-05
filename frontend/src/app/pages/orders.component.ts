@@ -93,7 +93,7 @@ export class OrdersComponent implements OnInit {
 
   orders = signal<OrderResponseDTO[]>([]);
   loading = signal(false);
-  pageSize = 85;
+  pageSize = 20;
   page = 0;
   totalPages = 0;
   isLastPage = false;
@@ -118,21 +118,15 @@ export class OrdersComponent implements OnInit {
     }
     
     this.loading.set(true);
-    this.orderService.getUserOrders(this.userId, this.page, this.pageSize).subscribe({
+    this.orderService.getUserActiveOrders(this.userId, this.page, this.pageSize).subscribe({
       next: (response: OrderPage) => {
         this.totalPages = response.totalPages ?? 0;
         this.isLastPage = this.page >= (this.totalPages - 1);
         
-        // Filtrar solo órdenes en proceso, enviadas o entregadas
-        const filteredOrders = response.content.filter(order => {
-          const status = order.estado.toUpperCase();
-          return status === 'PROCESANDO' || status === 'ENVIADO' || status === 'ENTREGADO';
-        });
-        
         if (reset) {
-          this.orders.set(filteredOrders);
+          this.orders.set(response.content);
         } else {
-          this.orders.update(orders => [...orders, ...filteredOrders]);
+          this.orders.update(orders => [...orders, ...response.content]);
         }
         this.loading.set(false);
       },

@@ -30,6 +30,7 @@ export class App implements OnInit {
   topRatedProducts = signal<Product[]>([]);
   loading = signal(true);
   loadingTopRated = signal(true);
+  loadingBrands = signal(true);
   error = signal<string | null>(null);
   currentPage = signal(0);
   totalPages = signal(0);
@@ -51,15 +52,18 @@ export class App implements OnInit {
   }
 
   loadBrands() {
+    this.loadingBrands.set(true);
     this.brandService.getAllBrands().subscribe({
       next: (brands) => {
         this.brands.set(brands);
         this.displayBrands.set(brands);
         this.brandsJson.set(JSON.stringify(brands, null, 2));
         this.brandCarouselIndex.set(0);
+        this.loadingBrands.set(false);
       },
       error: (err) => {
         console.error('Error loading brands:', err);
+        this.loadingBrands.set(false);
       }
     });
   }

@@ -132,7 +132,7 @@ export class CartPageComponent implements OnInit {
       const cartData = {
         total: this.total,
         items: this.items.map(item => ({
-          id: item.id,
+          productId: item.product?.id,
           cantidad: item.cantidad,
           precio: item.product?.precio ?? item.precio,
           nombre: item.product?.nombre ?? '',

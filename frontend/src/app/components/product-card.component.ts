@@ -2,11 +2,12 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Product } from '../models/product.model';
+import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
 
 @Component({
   selector: 'app-product-card',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RoundDecimalPipe],
   template: `
     <a [routerLink]="['/product', product.id]" class="border rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition block bg-white">
       <ng-container *ngIf="product.imagenPrincipal?.url; else noImage">
@@ -21,7 +22,7 @@ import { Product } from '../models/product.model';
         <ng-container *ngIf="product.promedioRating > 0; else noRating">
           <span class="flex items-center space-x-1">
             <span class="text-yellow-500 text-lg">&#9733;</span>
-            <span class="font-bold">{{ product.promedioRating }}</span>
+            <span class="font-bold">{{ product.promedioRating | roundDecimal: 1 }}</span>
             <span class="text-gray-500">/ 5</span>
           </span>
         </ng-container>
