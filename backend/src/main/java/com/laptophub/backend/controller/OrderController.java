@@ -69,20 +69,17 @@ public class OrderController {
     }
 
     /**
-     * Verifica si un usuario ha comprado un producto específico.
+     * Verifica si un usuario ha comprado un producto específico e incluye información de reseña.
      * @param userId ID del usuario
      * @param productId ID del producto
-     * @return Response con boolean indicando si el producto fue comprado
+     * @return Response con purchased, hasReview y reviewId
      */
     @GetMapping("/user/{userId}/product/{productId}/purchased")
     public PurchasedResponseDTO checkProductPurchased(
             @PathVariable UUID userId,
             @PathVariable Long productId
     ) {
-        boolean purchased = orderService.isProductPurchasedByUser(userId, productId);
-        return PurchasedResponseDTO.builder()
-                .purchased(purchased)
-                .build();
+        return orderService.checkProductPurchase(userId, productId);
     }
 
     /**

@@ -41,8 +41,12 @@ public class UserService {
     @Transactional(readOnly = true)
     @SuppressWarnings("null")
     public User findById(UUID id) {
-        return userRepository.findById(id)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        if (user.getDeletedAt() != null) {
+            throw new ResourceNotFoundException("Usuario no encontrado con id: " + id);
+        }
+        return user;
     }
     
     @Transactional(readOnly = true)
@@ -63,7 +67,12 @@ public class UserService {
     
     @Transactional(readOnly = true)
     public Page<UserResponseDTO> findAllDTO(@NonNull Pageable pageable) {
-        return userRepository.findAll(pageable).map(DTOMapper::toUserResponse);
+        return userRepository.findAllByDeletedAtIsNull(pageable).map(DTOMapper::toUserResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponseDTO> findAllInactiveDTO(@NonNull Pageable pageable) {
+        return userRepository.findAllByDeletedAtIsNotNull(pageable).map(DTOMapper::toUserResponse);
     }
     
     @Transactional
@@ -76,5 +85,29 @@ public class UserService {
         if (dto.getDireccion() != null) existingUser.setDireccion(dto.getDireccion());
         User saved = userRepository.save(existingUser);
         return DTOMapper.toUserResponse(saved);
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public void deactivateUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        if (user.getDeletedAt() != null) {
+            throw new com.laptophub.backend.exception.ConflictException("El usuario ya está desactivado");
+        }
+        user.setDeletedAt(java.time.LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public UserResponseDTO reactivateUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+        if (user.getDeletedAt() == null) {
+            throw new com.laptophub.backend.exception.ConflictException("El usuario ya está activo");
+        }
+        user.setDeletedAt(null);
+        return DTOMapper.toUserResponse(userRepository.save(user));
     }
 }

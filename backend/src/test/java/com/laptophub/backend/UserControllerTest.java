@@ -112,13 +112,14 @@ public class UserControllerTest {
     }
 
     /**
-     * TEST 3: Listar todos los usuarios (GET /api/users) con paginación
+     * TEST 3: Listar usuarios activos (GET /api/users) — no debe incluir desactivados
      */
     @Test
     @Order(3)
     public void test3_FindAllUsers() throws Exception {
-        System.out.println("\n=== TEST 3: Listar todos los usuarios (GET /api/users) ===");
+        System.out.println("\n=== TEST 3: Listar usuarios activos (GET /api/users) ===");
         
+        // Solo debe aparecer el usuario activo (el admin no aparece aquí porque se filtra por deletedAt IS NULL)
         mockMvc.perform(get("/api/users")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("page", "0")
@@ -126,11 +127,18 @@ public class UserControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.content[0].deletedAt").isEmpty())
                 .andExpect(jsonPath("$.totalElements").exists())
                 .andExpect(jsonPath("$.totalPages").exists());
+
+        // Lista de inactivos debe estar vacía (ninguno desactivado aún)
+        mockMvc.perform(get("/api/users/inactive")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
         
-        System.out.println("✅ TEST 3 PASÓ: Lista paginada de usuarios obtenida\n");
+        System.out.println("✅ TEST 3 PASÓ: Lista de usuarios activos verificada\n");
     }
 
     /**
@@ -215,5 +223,82 @@ public class UserControllerTest {
         
         System.out.println("✅ TEST 6 PASÓ: Usuario final creado con ID: " + createdUser.getId());
         System.out.println("📋 Verifica en tu gestor de BD el usuario con email: verificacion.manual@laptophub.com\n");
+    }
+
+    /**
+     * TEST 7: Desactivar usuario (DELETE /api/users/{id}) y verificar que queda en lista inactiva
+     */
+    @Test
+    @Order(7)
+    public void test7_DeactivateUser() throws Exception {
+        System.out.println("\n=== TEST 7: Desactivar usuario (DELETE /api/users/{id}) ===");
+
+        mockMvc.perform(delete("/api/users/" + userId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        // No aparece en lista activa
+        mockMvc.perform(get("/api/users")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.id == '" + userId + "')]").doesNotExist());
+
+        // Sí aparece en lista inactiva
+        mockMvc.perform(get("/api/users/inactive")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.id == '" + userId + "')].deletedAt").isNotEmpty());
+
+        System.out.println("✅ TEST 7 PASÓ: Usuario desactivado y aparece en inactivos\n");
+    }
+
+    /**
+     * TEST 8: Usuario desactivado no puede autenticarse (login debe retornar 400)
+     */
+    @Test
+    @Order(8)
+    public void test8_DeactivatedUserCannotLogin() throws Exception {
+        System.out.println("\n=== TEST 8: Usuario desactivado no puede autenticarse ===");
+
+        String loginBody = "{\"email\":\"" + TEST_EMAIL + "\",\"password\":\"password123\"}";
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Cuenta desactivada. Contacta con el administrador."));
+
+        System.out.println("✅ TEST 8 PASÓ: Usuario desactivado es rechazado en login\n");
+    }
+
+    /**
+     * TEST 9: Reactivar usuario (PUT /api/users/{id}/reactivate) y verificar que puede autenticarse
+     */
+    @Test
+    @Order(9)
+    public void test9_ReactivateUser() throws Exception {
+        System.out.println("\n=== TEST 9: Reactivar usuario (PUT /api/users/{id}/reactivate) ===");
+
+        mockMvc.perform(put("/api/users/" + userId + "/reactivate")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.deletedAt").isEmpty());
+
+        // Ahora sí puede autenticarse
+        String loginBody = "{\"email\":\"" + TEST_EMAIL + "\",\"password\":\"password123\"}";
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty());
+
+        System.out.println("✅ TEST 9 PASÓ: Usuario reactivado puede autenticarse\n");
     }
 }

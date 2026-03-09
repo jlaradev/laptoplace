@@ -35,6 +35,12 @@ public class UserController {
         return userService.findAllDTO(pageable);
     }
 
+    @GetMapping("/inactive")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public Page<UserResponseDTO> findAllInactive(@NonNull Pageable pageable) {
+        return userService.findAllInactiveDTO(pageable);
+    }
+
     @GetMapping("/email")
     public UserResponseDTO findByEmail(@RequestParam String email) {
         return userService.findByEmailDTO(email);
@@ -43,5 +49,17 @@ public class UserController {
     @PutMapping("/{id}")
     public UserResponseDTO update(@PathVariable UUID id, @Valid @RequestBody UserUpdateDTO dto) {
         return userService.updateUser(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public void deactivate(@PathVariable UUID id) {
+        userService.deactivateUser(id);
+    }
+
+    @PutMapping("/{id}/reactivate")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public UserResponseDTO reactivate(@PathVariable UUID id) {
+        return userService.reactivateUser(id);
     }
 }

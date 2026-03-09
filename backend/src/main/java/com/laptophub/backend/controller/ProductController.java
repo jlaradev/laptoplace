@@ -47,14 +47,23 @@ public class ProductController {
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "20") int size
     ) {
-        // Determinar si el usuario es ADMIN
         boolean isAdmin = isUserAdmin();
-        
-        // Crear Pageable con los parámetros de paginación
         Pageable pageable = PageRequest.of(page, size);
-        
-        // Llamar al servicio con búsqueda unificada
-        return productService.search(nombre, brandId, sortBy, sort, pageable, isAdmin);
+        return productService.search(nombre, brandId, sortBy, sort, pageable, isAdmin, true);
+    }
+
+    @GetMapping("/inactive")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public Page<ProductListDTO> searchInactive(
+            @RequestParam(required = false) String nombre,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sort,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "20") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return productService.search(nombre, brandId, sortBy, sort, pageable, true, false);
     }
 
     /**
@@ -65,7 +74,7 @@ public class ProductController {
     public Page<ProductListDTO> getTopRated() {
         boolean isAdmin = isUserAdmin();
         Pageable pageable = PageRequest.of(0, 10);
-        return productService.search(null, null, "rating", "desc", pageable, isAdmin);
+        return productService.search(null, null, "rating", "desc", pageable, isAdmin, true);
     }
 
     @GetMapping("/{id}")
@@ -84,8 +93,15 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        productService.deleteProduct(id);
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public void deactivate(@PathVariable Long id) {
+        productService.deactivateProduct(id);
+    }
+
+    @PutMapping("/{id}/reactivate")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ProductResponseDTO reactivate(@PathVariable Long id) {
+        return productService.reactivateProduct(id);
     }
 
     /**

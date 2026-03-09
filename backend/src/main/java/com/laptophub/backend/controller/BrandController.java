@@ -22,27 +22,39 @@ public class BrandController {
     public Page<BrandResponseDTO> findAll(@NonNull Pageable pageable) {
         return brandService.findAll(pageable);
     }
-    
+
+    @GetMapping("/inactive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<BrandResponseDTO> findAllInactive(@NonNull Pageable pageable) {
+        return brandService.findAllInactive(pageable);
+    }
+
     @GetMapping("/{id}")
     public BrandResponseDTO findById(@PathVariable Long id) {
         return brandService.findById(id);
     }
-    
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public BrandResponseDTO create(@Valid @RequestBody BrandCreateDTO dto) {
         return brandService.createBrand(dto);
     }
-    
+
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public BrandResponseDTO update(@PathVariable Long id, @Valid @RequestBody BrandCreateDTO dto) {
         return brandService.updateBrand(id, dto);
     }
-    
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public void delete(@PathVariable Long id) {
-        brandService.deleteBrand(id);
+    public void deactivate(@PathVariable Long id) {
+        brandService.deactivateBrand(id);
+    }
+
+    @PutMapping("/{id}/reactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public BrandResponseDTO reactivate(@PathVariable Long id) {
+        return brandService.reactivateBrand(id);
     }
 }

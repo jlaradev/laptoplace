@@ -9,7 +9,13 @@ import com.laptophub.backend.model.Brand;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.BrandRepository;
+import com.laptophub.backend.repository.CartItemRepository;
+import com.laptophub.backend.repository.OrderItemRepository;
+import com.laptophub.backend.repository.OrderRepository;
+import com.laptophub.backend.repository.PaymentRepository;
+import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.repository.UserRepository;
 import com.laptophub.backend.support.TestAuthHelper;
 import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
@@ -53,6 +59,24 @@ public class ExceptionHandlingIntegrationTest {
     private ProductRepository productRepository;
 
     @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private ProductImageRepository productImageRepository;
+
+    @Autowired
     private BrandRepository brandRepository;
 
         @Autowired
@@ -66,9 +90,15 @@ public class ExceptionHandlingIntegrationTest {
     @BeforeEach
     @SuppressWarnings("null")
         public void setup() throws Exception {
-        // Limpiar datos previos para evitar conflictos de constrainta única
-        productRepository.deleteAll();
-        brandRepository.deleteAll();
+        // Limpiar datos previos respetando el orden de dependencias FK
+        reviewRepository.deleteAllInBatch();
+        cartItemRepository.deleteAllInBatch();
+        orderItemRepository.deleteAllInBatch();
+        paymentRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
+        productImageRepository.deleteAllInBatch();
+        productRepository.deleteAllInBatch();
+        brandRepository.deleteAllInBatch();
         
         AuthInfo authInfo = TestAuthHelper.registerAndLogin(
                 mockMvc,

@@ -30,4 +30,5 @@ public class ProductResponseDTO {
     private List<ReviewResponseDTO> resenas;
     private Double promedioRating;
     private LocalDateTime createdAt;
+    private LocalDateTime deletedAt;
 }

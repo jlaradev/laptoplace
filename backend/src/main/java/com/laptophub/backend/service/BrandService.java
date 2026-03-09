@@ -22,7 +22,12 @@ public class BrandService {
     
     @Transactional(readOnly = true)
     public Page<BrandResponseDTO> findAll(@NonNull Pageable pageable) {
-        return brandRepository.findAll(pageable).map(DTOMapper::toBrandResponse);
+        return brandRepository.findAllByDeletedAtIsNull(pageable).map(DTOMapper::toBrandResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BrandResponseDTO> findAllInactive(@NonNull Pageable pageable) {
+        return brandRepository.findAllByDeletedAtIsNotNull(pageable).map(DTOMapper::toBrandResponse);
     }
     
     @Transactional(readOnly = true)
@@ -30,12 +35,15 @@ public class BrandService {
     public BrandResponseDTO findById(Long id) {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada con id: " + id));
+        if (brand.getDeletedAt() != null) {
+            throw new ResourceNotFoundException("Marca no encontrada con id: " + id);
+        }
         return DTOMapper.toBrandResponse(brand);
     }
     
     @Transactional(readOnly = true)
     public BrandResponseDTO findByNombre(String nombre) {
-        Brand brand = brandRepository.findByNombre(nombre)
+        Brand brand = brandRepository.findByNombreAndDeletedAtIsNull(nombre)
                 .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada: " + nombre));
         return DTOMapper.toBrandResponse(brand);
     }
@@ -85,10 +93,25 @@ public class BrandService {
     
     @Transactional
     @SuppressWarnings("null")
-    public void deleteBrand(Long id) {
-        if (!brandRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Marca no encontrada con id: " + id);
+    public void deactivateBrand(Long id) {
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada con id: " + id));
+        if (brand.getDeletedAt() != null) {
+            throw new ConflictException("La marca ya está desactivada");
         }
-        brandRepository.deleteById(id);
+        brand.setDeletedAt(java.time.LocalDateTime.now());
+        brandRepository.save(brand);
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public BrandResponseDTO reactivateBrand(Long id) {
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada con id: " + id));
+        if (brand.getDeletedAt() == null) {
+            throw new ConflictException("La marca ya está activa");
+        }
+        brand.setDeletedAt(null);
+        return DTOMapper.toBrandResponse(brandRepository.save(brand));
     }
 }

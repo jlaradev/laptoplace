@@ -54,6 +54,8 @@ public class AuthController {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
+        } catch (org.springframework.security.authentication.DisabledException ex) {
+            throw new ValidationException("Cuenta desactivada. Contacta con el administrador.");
         } catch (BadCredentialsException ex) {
             // Solo consumir ficha del rate limiter cuando las credenciales son incorrectas
             if (!rateLimiterService.tryConsume(clientIp)) {

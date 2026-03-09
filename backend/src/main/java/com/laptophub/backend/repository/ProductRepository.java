@@ -25,6 +25,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     /**
      * Búsqueda unificada ordenada por NOMBRE (A-Z)
+     * onlyActive=true → solo activos (deletedAt IS NULL)
+     * onlyActive=false → solo inactivos (deletedAt IS NOT NULL)
      */
     @Query("""
         SELECT p FROM Product p
@@ -32,12 +34,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR :nombre IS NULL)
             AND (p.brand.id = :brandId OR :brandId IS NULL)
             AND (p.stock > 0 OR :includeOutOfStock = true)
+            AND ((:onlyActive = true AND p.deletedAt IS NULL) OR (:onlyActive = false AND p.deletedAt IS NOT NULL))
         ORDER BY p.nombre ASC
         """)
     Page<Product> searchByNameAsc(
         @Param("nombre") String nombre,
         @Param("brandId") Long brandId,
         @Param("includeOutOfStock") boolean includeOutOfStock,
+        @Param("onlyActive") boolean onlyActive,
         Pageable pageable
     );
     
@@ -47,12 +51,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR :nombre IS NULL)
             AND (p.brand.id = :brandId OR :brandId IS NULL)
             AND (p.stock > 0 OR :includeOutOfStock = true)
+            AND ((:onlyActive = true AND p.deletedAt IS NULL) OR (:onlyActive = false AND p.deletedAt IS NOT NULL))
         ORDER BY p.nombre DESC
         """)
     Page<Product> searchByNameDesc(
         @Param("nombre") String nombre,
         @Param("brandId") Long brandId,
         @Param("includeOutOfStock") boolean includeOutOfStock,
+        @Param("onlyActive") boolean onlyActive,
         Pageable pageable
     );
     
@@ -65,12 +71,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR :nombre IS NULL)
             AND (p.brand.id = :brandId OR :brandId IS NULL)
             AND (p.stock > 0 OR :includeOutOfStock = true)
+            AND ((:onlyActive = true AND p.deletedAt IS NULL) OR (:onlyActive = false AND p.deletedAt IS NOT NULL))
         ORDER BY p.precio ASC
         """)
     Page<Product> searchByPriceAsc(
         @Param("nombre") String nombre,
         @Param("brandId") Long brandId,
         @Param("includeOutOfStock") boolean includeOutOfStock,
+        @Param("onlyActive") boolean onlyActive,
         Pageable pageable
     );
     
@@ -80,12 +88,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR :nombre IS NULL)
             AND (p.brand.id = :brandId OR :brandId IS NULL)
             AND (p.stock > 0 OR :includeOutOfStock = true)
+            AND ((:onlyActive = true AND p.deletedAt IS NULL) OR (:onlyActive = false AND p.deletedAt IS NOT NULL))
         ORDER BY p.precio DESC
         """)
     Page<Product> searchByPriceDesc(
         @Param("nombre") String nombre,
         @Param("brandId") Long brandId,
         @Param("includeOutOfStock") boolean includeOutOfStock,
+        @Param("onlyActive") boolean onlyActive,
         Pageable pageable
     );
     
@@ -98,12 +108,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR :nombre IS NULL)
             AND (p.brand.id = :brandId OR :brandId IS NULL)
             AND (p.stock > 0 OR :includeOutOfStock = true)
+            AND ((:onlyActive = true AND p.deletedAt IS NULL) OR (:onlyActive = false AND p.deletedAt IS NOT NULL))
         ORDER BY p.createdAt DESC
         """)
     Page<Product> searchByCreatedAtDesc(
         @Param("nombre") String nombre,
         @Param("brandId") Long brandId,
         @Param("includeOutOfStock") boolean includeOutOfStock,
+        @Param("onlyActive") boolean onlyActive,
         Pageable pageable
     );
     
@@ -113,12 +125,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             (LOWER(p.nombre) LIKE LOWER(CONCAT('%', :nombre, '%')) OR :nombre IS NULL)
             AND (p.brand.id = :brandId OR :brandId IS NULL)
             AND (p.stock > 0 OR :includeOutOfStock = true)
+            AND ((:onlyActive = true AND p.deletedAt IS NULL) OR (:onlyActive = false AND p.deletedAt IS NOT NULL))
         ORDER BY p.createdAt ASC
         """)
     Page<Product> searchByCreatedAtAsc(
         @Param("nombre") String nombre,
         @Param("brandId") Long brandId,
         @Param("includeOutOfStock") boolean includeOutOfStock,
+        @Param("onlyActive") boolean onlyActive,
         Pageable pageable
     );
     

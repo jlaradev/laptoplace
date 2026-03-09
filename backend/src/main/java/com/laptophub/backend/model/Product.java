@@ -57,7 +57,10 @@ public class Product {
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-    
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @JsonIgnore
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> cartItems;

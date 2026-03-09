@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -19,4 +20,5 @@ public class ProductListDTO {
     private BrandResponseDTO brand;
     private ProductImageDTO imagenPrincipal;
     private Double promedioRating;
+    private LocalDateTime deletedAt;
 }

@@ -389,6 +389,35 @@ public class OrderService {
     }
 
     /**
+     * Verifica si un usuario ha comprado un producto e incluye información de reseña.
+     * @param userId ID del usuario
+     * @param productId ID del producto
+     * @return DTO con purchased, hasReview y reviewId
+     */
+    @Transactional(readOnly = true)
+    public PurchasedResponseDTO checkProductPurchase(UUID userId, Long productId) {
+        boolean purchased = orderRepository.hasUserPurchasedProduct(userId, productId);
+        if (!purchased) {
+            return PurchasedResponseDTO.builder()
+                    .purchased(false)
+                    .hasReview(false)
+                    .reviewId(null)
+                    .build();
+        }
+        return reviewRepository.findByProductIdAndUserId(productId, userId)
+                .map(review -> PurchasedResponseDTO.builder()
+                        .purchased(true)
+                        .hasReview(true)
+                        .reviewId(review.getId())
+                        .build())
+                .orElse(PurchasedResponseDTO.builder()
+                        .purchased(true)
+                        .hasReview(false)
+                        .reviewId(null)
+                        .build());
+    }
+
+    /**
      * Obtiene los productos que un usuario puede reseñar (paginados).
      * Solo retorna productos asociados a órdenes con estado ENTREGADO.
      * @param userId ID del usuario

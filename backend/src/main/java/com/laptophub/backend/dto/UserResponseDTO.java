@@ -20,4 +20,5 @@ public class UserResponseDTO {
     private String telefono;
     private String direccion;
     private LocalDateTime createdAt;
+    private LocalDateTime deletedAt;
 }

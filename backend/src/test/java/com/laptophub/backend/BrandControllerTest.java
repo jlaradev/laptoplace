@@ -117,13 +117,14 @@ public class BrandControllerTest {
     }
 
     /**
-     * TEST 3: Listar todas las marcas (GET /api/brands)
+     * TEST 3: Listar marcas activas (GET /api/brands) — no debe incluir desactivadas
      */
     @Test
     @Order(3)
     public void test3_FindAllBrands() throws Exception {
-        System.out.println("\n=== TEST 3: Listar todas las marcas (GET /api/brands) ===");
+        System.out.println("\n=== TEST 3: Listar marcas activas (GET /api/brands) ===");
 
+        // Verificar que el listado devuelve la marca creada
         mockMvc.perform(get("/api/brands")
                         .param("page", "0")
                         .param("size", "10")
@@ -131,9 +132,18 @@ public class BrandControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.totalElements").exists());
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(brandId))
+                .andExpect(jsonPath("$.content[0].deletedAt").isEmpty());
 
-        System.out.println("✅ TEST 3 PASÓ: Lista de marcas obtenida\n");
+        // Verificar que la lista de inactivas está vacía (ninguna desactivada aún)
+        mockMvc.perform(get("/api/brands/inactive")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        System.out.println("✅ TEST 3 PASÓ: Lista de marcas activas verificada\n");
     }
 
     /**
@@ -197,12 +207,64 @@ public class BrandControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk());
 
-        // Verificar que fue eliminada
+        // Verificar que fue eliminada (404 para usuarios normales y admin)
         mockMvc.perform(get("/api/brands/" + brandId)
                         .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isNotFound());
 
-        System.out.println("✅ TEST 6 PASÓ: Marca eliminada correctamente\n");
+        System.out.println("✅ TEST 6 PASÓ: Marca desactivada correctamente\n");
+    }
+
+    /**
+     * TEST 7: Listar marcas inactivas (GET /api/brands/inactive)
+     */
+    @Test
+    @Order(7)
+    public void test7_ListInactiveBrands() throws Exception {
+        System.out.println("\n=== TEST 7: Listar marcas inactivas (GET /api/brands/inactive) ===");
+
+        // La marca del test6 ya está desactivada
+        mockMvc.perform(get("/api/brands/inactive")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].id").value(brandId))
+                .andExpect(jsonPath("$.content[0].deletedAt").isNotEmpty());
+
+        // Verificar que NO aparece en la lista activa
+        mockMvc.perform(get("/api/brands")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        System.out.println("✅ TEST 7 PASÓ: Lista de marcas inactivas correcta\n");
+    }
+
+    /**
+     * TEST 8: Reactivar marca (PUT /api/brands/{id}/reactivate)
+     */
+    @Test
+    @Order(8)
+    public void test8_ReactivateBrand() throws Exception {
+        System.out.println("\n=== TEST 8: Reactivar marca (PUT /api/brands/{id}/reactivate) ===");
+
+        mockMvc.perform(put("/api/brands/" + brandId + "/reactivate")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(brandId))
+                .andExpect(jsonPath("$.deletedAt").isEmpty());
+
+        // Ahora sí debe aparecer en la lista activa
+        mockMvc.perform(get("/api/brands")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        System.out.println("✅ TEST 8 PASÓ: Marca reactivada correctamente\n");
     }
 }

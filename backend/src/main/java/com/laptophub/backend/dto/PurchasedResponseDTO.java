@@ -11,4 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PurchasedResponseDTO {
     private boolean purchased;
+    private boolean hasReview;
+    private Long reviewId;
 }

@@ -42,6 +42,9 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;

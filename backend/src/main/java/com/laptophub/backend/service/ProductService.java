@@ -7,6 +7,7 @@ import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.model.Review;
 import com.laptophub.backend.repository.BrandRepository;
+import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ReviewRepository;
@@ -30,6 +31,8 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final ReviewRepository reviewRepository;
     private final BrandRepository brandRepository;
+    private final CartItemRepository cartItemRepository;
+    @SuppressWarnings("unused")
     private final CloudinaryService cloudinaryService;
     
     /**
@@ -48,13 +51,14 @@ public class ProductService {
             String sortBy,
             String sort,
             @NonNull Pageable pageable,
-            boolean isAdmin
+            boolean isAdmin,
+            boolean onlyActive
     ) {
         boolean includeOutOfStock = isAdmin;
         
         // Para rating, usar lógica especial que ordena en memoria
         if ("rating".equalsIgnoreCase(sortBy)) {
-            return searchByRating(nombre, brandId, includeOutOfStock, sort, pageable);
+            return searchByRating(nombre, brandId, includeOutOfStock, sort, pageable, onlyActive);
         }
         
         // Para otros ordenamientos, usar queries de base de datos
@@ -62,17 +66,17 @@ public class ProductService {
         
         if ("price".equalsIgnoreCase(sortBy)) {
             results = "asc".equalsIgnoreCase(sort)
-                    ? productRepository.searchByPriceAsc(nombre, brandId, includeOutOfStock, pageable)
-                    : productRepository.searchByPriceDesc(nombre, brandId, includeOutOfStock, pageable);
+                    ? productRepository.searchByPriceAsc(nombre, brandId, includeOutOfStock, onlyActive, pageable)
+                    : productRepository.searchByPriceDesc(nombre, brandId, includeOutOfStock, onlyActive, pageable);
         } else if ("name".equalsIgnoreCase(sortBy)) {
             results = "asc".equalsIgnoreCase(sort)
-                    ? productRepository.searchByNameAsc(nombre, brandId, includeOutOfStock, pageable)
-                    : productRepository.searchByNameDesc(nombre, brandId, includeOutOfStock, pageable);
+                    ? productRepository.searchByNameAsc(nombre, brandId, includeOutOfStock, onlyActive, pageable)
+                    : productRepository.searchByNameDesc(nombre, brandId, includeOutOfStock, onlyActive, pageable);
         } else {
             // Default: createdAt
             results = "asc".equalsIgnoreCase(sort)
-                    ? productRepository.searchByCreatedAtAsc(nombre, brandId, includeOutOfStock, pageable)
-                    : productRepository.searchByCreatedAtDesc(nombre, brandId, includeOutOfStock, pageable);
+                    ? productRepository.searchByCreatedAtAsc(nombre, brandId, includeOutOfStock, onlyActive, pageable)
+                    : productRepository.searchByCreatedAtDesc(nombre, brandId, includeOutOfStock, onlyActive, pageable);
         }
         
         return mapProductsToDTO(results);
@@ -87,12 +91,11 @@ public class ProductService {
             Long brandId,
             boolean includeOutOfStock,
             String sortDirection,
-            Pageable pageable
+            Pageable pageable,
+            boolean onlyActive
     ) {
-        // Traer TODOS los productos sin paginación de BD (con filtros pero sin limit)
-        // Usando un Pageable con tamaño muy grande para obtener todos
         Pageable allData = org.springframework.data.domain.PageRequest.of(0, 10000);
-        Page<Product> allProducts = productRepository.searchByCreatedAtDesc(nombre, brandId, includeOutOfStock, allData);
+        Page<Product> allProducts = productRepository.searchByCreatedAtDesc(nombre, brandId, includeOutOfStock, onlyActive, allData);
         
         // Mapear a DTO y calcular ratings
         List<ProductListDTO> dtos = allProducts.getContent().stream()
@@ -146,8 +149,12 @@ public class ProductService {
     @Transactional(readOnly = true)
     @SuppressWarnings("null")
     public Product findById(Long id) {
-        return productRepository.findById(id)
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
+        if (product.getDeletedAt() != null) {
+            throw new ResourceNotFoundException("Producto no encontrado con id: " + id);
+        }
+        return product;
     }
     
     @Transactional(readOnly = true)
@@ -200,25 +207,38 @@ public class ProductService {
     
     @Transactional
     @SuppressWarnings("null")
-    public void deleteProduct(Long id) {
-        if (!productRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Producto no encontrado con id: " + id);
+    public void deactivateProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
+        if (product.getDeletedAt() != null) {
+            throw new com.laptophub.backend.exception.ConflictException("El producto ya está desactivado");
         }
+        // Eliminar de todos los carritos activos
+        cartItemRepository.deleteByProductId(id);
+        product.setDeletedAt(java.time.LocalDateTime.now());
+        productRepository.save(product);
+    }
 
+    @Transactional
+    @SuppressWarnings("null")
+    public ProductResponseDTO reactivateProduct(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
+        if (product.getDeletedAt() == null) {
+            throw new com.laptophub.backend.exception.ConflictException("El producto ya está activo");
+        }
+        product.setDeletedAt(null);
+        Product saved = productRepository.save(product);
         List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(id);
-        for (ProductImage image : images) {
-            try {
-                cloudinaryService.deleteImage(image.getUrl());
-            } catch (java.io.IOException e) {
-                throw new RuntimeException("Error al eliminar imagen en Cloudinary", e);
-            }
-        }
-
-        productRepository.deleteById(id);
+        List<Review> reviews = reviewRepository.findByProduct(saved);
+        Double avgRating = getAverageRatingForProduct(id);
+        return DTOMapper.toProductResponse(saved, images, reviews, avgRating);
     }
     
+    @SuppressWarnings("null")
     private Double getAverageRatingForProduct(Long productId) {
-        Product product = findById(productId);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + productId));
         List<Review> reviews = reviewRepository.findByProduct(product);
         return reviews.stream()
                 .mapToInt(Review::getRating)

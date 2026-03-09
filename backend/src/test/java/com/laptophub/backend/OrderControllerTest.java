@@ -631,6 +631,8 @@ public class OrderControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.purchased").exists())
+                .andExpect(jsonPath("$.hasReview").exists())
+                .andExpect(jsonPath("$.reviewId").hasJsonPath())
                 .andReturn();
         
         String response = result.getResponse().getContentAsString();
@@ -641,10 +643,15 @@ public class OrderControllerTest {
         
         com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
         boolean purchased = jsonNode.get("purchased").asBoolean();
+        boolean hasReview = jsonNode.get("hasReview").asBoolean();
         
         System.out.println("\n✓ Campo 'purchased': " + purchased);
+        System.out.println("✓ Campo 'hasReview': " + hasReview);
+        System.out.println("✓ Campo 'reviewId': " + (jsonNode.get("reviewId").isNull() ? "null" : jsonNode.get("reviewId").asText()));
         org.junit.jupiter.api.Assertions.assertFalse(purchased, "El producto no fue comprado, debe retornar false");
-        System.out.println("\n✅ TEST 13 PASÓ: El endpoint retorna correctamente 'purchased': false\n");
+        org.junit.jupiter.api.Assertions.assertFalse(hasReview, "No debe haber reseña si no fue comprado");
+        org.junit.jupiter.api.Assertions.assertTrue(jsonNode.get("reviewId").isNull(), "reviewId debe ser null");
+        System.out.println("\n✅ TEST 13 PASÓ: El endpoint retorna correctamente 'purchased': false, 'hasReview': false, 'reviewId': null\n");
     }
 
     /**
@@ -843,6 +850,9 @@ public class OrderControllerTest {
                         .header("Authorization", "Bearer " + deliveryUserAuth.getToken()))
                 .andDo(print())
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.purchased").exists())
+                .andExpect(jsonPath("$.hasReview").exists())
+                .andExpect(jsonPath("$.reviewId").hasJsonPath())
                 .andReturn();
         
         String purchasedResponse = purchasedResult.getResponse().getContentAsString();
@@ -853,8 +863,13 @@ public class OrderControllerTest {
         
         com.fasterxml.jackson.databind.JsonNode purchasedJsonNode = objectMapper.readTree(purchasedResponse);
         boolean purchased = purchasedJsonNode.get("purchased").asBoolean();
+        boolean hasReview = purchasedJsonNode.get("hasReview").asBoolean();
         System.out.println("✓ Campo 'purchased': " + purchased);
+        System.out.println("✓ Campo 'hasReview': " + hasReview);
+        System.out.println("✓ Campo 'reviewId': " + (purchasedJsonNode.get("reviewId").isNull() ? "null" : purchasedJsonNode.get("reviewId").asText()));
         org.junit.jupiter.api.Assertions.assertTrue(purchased, "El producto debe estar marcado como comprado");
+        org.junit.jupiter.api.Assertions.assertFalse(hasReview, "No debe tener reseña aún (no se ha creado ninguna)");
+        org.junit.jupiter.api.Assertions.assertTrue(purchasedJsonNode.get("reviewId").isNull(), "reviewId debe ser null pues no hay reseña");
         
         System.out.println("\n✅ TEST 15 PASÓ: Ambos endpoints funcionan correctamente después de entregar la orden\n");
     }

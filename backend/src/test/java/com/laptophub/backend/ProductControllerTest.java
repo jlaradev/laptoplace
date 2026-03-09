@@ -203,12 +203,12 @@ public class ProductControllerTest {
     }
 
     /**
-     * TEST 3: Listar todos los productos (GET /api/products) con paginación
+     * TEST 3: Listar productos activos (GET /api/products) — no debe incluir desactivados
      */
     @Test
     @Order(3)
     public void test3_FindAllProducts() throws Exception {
-        System.out.println("\n=== TEST 3: Listar todos los productos (GET /api/products) ===");
+        System.out.println("\n=== TEST 3: Listar productos activos (GET /api/products) ===");
         
         mockMvc.perform(get("/api/products")
                         .param("page", "0")
@@ -217,10 +217,18 @@ public class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].id").exists())
-                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.content[0].deletedAt").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.totalPages").exists());
+
+        // Lista de inactivos debe estar vacía (ninguno desactivado aún)
+        mockMvc.perform(get("/api/products/inactive")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
         
-        System.out.println("✅ TEST 3 PASÓ: Lista paginada de productos obtenida\n");
+        System.out.println("✅ TEST 3 PASÓ: Lista de productos activos verificada\n");
     }
 
     /**
@@ -444,10 +452,11 @@ public class ProductControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk());
 
-        assertTrue(productImageRepository.findByProductIdOrderByOrdenAsc(Long.parseLong(productId)).isEmpty(),
-                "Las imagenes deben eliminarse al borrar el producto");
+        Product product = productRepository.findById(Long.parseLong(productId)).orElse(null);
+        assertTrue(product != null && product.getDeletedAt() != null,
+                "El producto debe estar desactivado (soft delete)");
         
-        System.out.println("✅ TEST 7 PASÓ: Producto eliminado correctamente\n");
+        System.out.println("✅ TEST 7 PASÓ: Producto desactivado correctamente\n");
     }
 
     /**
@@ -650,5 +659,105 @@ public class ProductControllerTest {
                 .andExpect(jsonPath("$.content[0].promedioRating").exists());
         
         System.out.println("✅ TEST 9 PASÓ: Top 10 mejor valorados obtenido correctamente\n");
+    }
+
+    /**
+     * TEST 10: Listar inactivos (GET /api/products/inactive) — solo admin
+     */
+    @Test
+    @Order(10)
+    public void test10_ListInactiveProducts() throws Exception {
+        System.out.println("\n=== TEST 10: Listar productos inactivos (GET /api/products/inactive) ===");
+
+        // Limpiar completamente y recrear admin (usuario de test1 puede haber sido borrado por otra clase)
+        reviewRepository.deleteAll();
+        cartItemRepository.deleteAll();
+        orderItemRepository.deleteAll();
+        productRepository.deleteAll();
+        brandRepository.deleteAll();
+        adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository, passwordEncoder, mockMvc, objectMapper,
+                TestAuthHelper.uniqueEmail("product.inactive"), "admin123");
+
+        // Crear marca y dos productos; desactivar uno
+        MvcResult br = mockMvc.perform(post("/api/brands")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"SoftBrand\",\"descripcion\":\"test\"}"))
+                .andExpect(status().isOk()).andReturn();
+        Brand sb = objectMapper.readValue(br.getResponse().getContentAsString(), Brand.class);
+
+        ProductCreateDTO activeDTO = ProductCreateDTO.builder()
+                .nombre("Activo").descripcion("desc").precio(new BigDecimal("100")).stock(5)
+                .brandId(sb.getId()).procesador("i5").ram(8).almacenamiento(256)
+                .pantalla("15\"").gpu("UHD").peso(new BigDecimal("1.5")).build();
+        ProductCreateDTO inactiveDTO = ProductCreateDTO.builder()
+                .nombre("Inactivo").descripcion("desc").precio(new BigDecimal("200")).stock(5)
+                .brandId(sb.getId()).procesador("i7").ram(16).almacenamiento(512)
+                .pantalla("15\"").gpu("RTX").peso(new BigDecimal("2.0")).build();
+
+        mockMvc.perform(post("/api/products").header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(activeDTO)))
+                .andExpect(status().isOk());
+
+        MvcResult inactiveResult = mockMvc.perform(post("/api/products")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(inactiveDTO)))
+                .andExpect(status().isOk()).andReturn();
+        String inactivePid = objectMapper.readTree(inactiveResult.getResponse().getContentAsString())
+                .get("id").asText();
+
+        // Desactivar el segundo
+        mockMvc.perform(delete("/api/products/" + inactivePid)
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        // Lista activa → solo 1
+        mockMvc.perform(get("/api/products").header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].nombre").value("Activo"));
+
+        // Lista inactiva → solo 1 con deletedAt
+        mockMvc.perform(get("/api/products/inactive").header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].nombre").value("Inactivo"))
+                .andExpect(jsonPath("$.content[0].deletedAt").isNotEmpty());
+
+        System.out.println("✅ TEST 10 PASÓ: Filtrado activo/inactivo correcto\n");
+    }
+
+    /**
+     * TEST 11: Reactivar producto (PUT /api/products/{id}/reactivate)
+     */
+    @Test
+    @Order(11)
+    public void test11_ReactivateProduct() throws Exception {
+        System.out.println("\n=== TEST 11: Reactivar producto (PUT /api/products/{id}/reactivate) ===");
+
+        // Obtenemos el product inactivo de la BD
+        Product inactivo = productRepository.findAll().stream()
+                .filter(p -> p.getDeletedAt() != null)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No hay producto inactivo"));
+
+        mockMvc.perform(put("/api/products/" + inactivo.getId() + "/reactivate")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(inactivo.getId()))
+                .andExpect(jsonPath("$.deletedAt").isEmpty());
+
+        // Ahora lista activa → 2
+        mockMvc.perform(get("/api/products").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+
+        System.out.println("✅ TEST 11 PASÓ: Producto reactivado correctamente\n");
     }
 }

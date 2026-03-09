@@ -20,6 +20,7 @@ public class DTOMapper {
                 .telefono(user.getTelefono())
                 .direccion(user.getDireccion())
                 .createdAt(user.getCreatedAt())
+                .deletedAt(user.getDeletedAt())
                 .build();
     }
 
@@ -66,6 +67,7 @@ public class DTOMapper {
                 .descripcion(brand.getDescripcion())
                 .imageUrl(brand.getImageUrl())
                 .createdAt(brand.getCreatedAt())
+                .deletedAt(brand.getDeletedAt())
                 .build();
     }
 
@@ -89,6 +91,7 @@ public class DTOMapper {
                 .resenas(reviews.stream().map(DTOMapper::toReviewResponse).collect(Collectors.toList()))
                 .promedioRating(avgRating)
                 .createdAt(product.getCreatedAt())
+                .deletedAt(product.getDeletedAt())
                 .build();
     }
 
@@ -101,6 +104,7 @@ public class DTOMapper {
                 .brand(product.getBrand() != null ? toBrandResponse(product.getBrand()) : null)
                 .imagenPrincipal(mainImage != null ? toProductImageDTO(mainImage) : null)
                 .promedioRating(avgRating)
+                .deletedAt(product.getDeletedAt())
                 .build();
     }
 

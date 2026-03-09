@@ -17,4 +17,5 @@ public class BrandResponseDTO {
     private String descripcion;
     private String imageUrl;
     private LocalDateTime createdAt;
+    private LocalDateTime deletedAt;
 }
