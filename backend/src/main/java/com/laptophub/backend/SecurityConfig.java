@@ -69,7 +69,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "https://fantastic-capybara-7xgqr46v65pcw67p-4200.app.github.dev"
+            "https://fantastic-capybara-7xgqr46v65pcw67p-4200.app.github.dev",
+            "https://laptoplace.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));

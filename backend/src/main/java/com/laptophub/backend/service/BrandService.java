@@ -13,12 +13,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
 public class BrandService {
     
     private final BrandRepository brandRepository;
+    private final CloudinaryService cloudinaryService;
     
     @Transactional(readOnly = true)
     public Page<BrandResponseDTO> findAll(@NonNull Pageable pageable) {
@@ -112,6 +116,22 @@ public class BrandService {
             throw new ConflictException("La marca ya está activa");
         }
         brand.setDeletedAt(null);
+        return DTOMapper.toBrandResponse(brandRepository.save(brand));
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public BrandResponseDTO uploadImage(Long id, MultipartFile file) throws IOException {
+        Brand brand = brandRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada con id: " + id));
+
+        // Eliminar imagen anterior de Cloudinary si existe
+        if (brand.getImageUrl() != null && !brand.getImageUrl().isBlank()) {
+            cloudinaryService.deleteImage(brand.getImageUrl());
+        }
+
+        String newUrl = cloudinaryService.uploadImage(file, "laptophub/brands");
+        brand.setImageUrl(newUrl);
         return DTOMapper.toBrandResponse(brandRepository.save(brand));
     }
 }

@@ -14,10 +14,14 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.nio.file.Files;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -266,5 +270,58 @@ public class BrandControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(1));
 
         System.out.println("✅ TEST 8 PASÓ: Marca reactivada correctamente\n");
+    }
+
+    /**
+     * TEST 9: Subir imagen de marca a Cloudinary (POST /api/brands/{id}/image)
+     */
+    @Test
+    @Order(9)
+    public void test9_UploadBrandImage() throws Exception {
+        System.out.println("\n=== TEST 9: Subir imagen de marca (POST /api/brands/{id}/image) ===");
+
+        // Auto-inicializar si el test se ejecuta de forma aislada (sin test1)
+        if (adminToken == null) {
+            productRepository.deleteAll();
+            brandRepository.deleteAll();
+
+            adminToken = TestAuthHelper.createAdminAndLogin(
+                    userRepository,
+                    passwordEncoder,
+                    mockMvc,
+                    objectMapper,
+                    TestAuthHelper.uniqueEmail("brand.image.admin"),
+                    "admin123"
+            );
+        }
+        if (brandId == null) {
+            BrandCreateDTO dto = BrandCreateDTO.builder()
+                    .nombre("BrandImageTest-" + System.currentTimeMillis())
+                    .descripcion("Marca de prueba para subida de imagen")
+                    .build();
+
+            MvcResult r = mockMvc.perform(post("/api/brands")
+                            .header("Authorization", "Bearer " + adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(dto)))
+                    .andExpect(status().isOk())
+                    .andReturn();
+
+            BrandResponseDTO created = objectMapper.readValue(r.getResponse().getContentAsString(), BrandResponseDTO.class);
+            brandId = created.getId().toString();
+        }
+
+        ClassPathResource resource = new ClassPathResource("test-images/laptop-front.webp");
+        byte[] imageBytes = Files.readAllBytes(resource.getFile().toPath());
+
+        mockMvc.perform(multipart("/api/brands/" + brandId + "/image")
+                        .file(new MockMultipartFile("file", "laptop-front.webp", "image/webp", imageBytes))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(brandId))
+                .andExpect(jsonPath("$.imageUrl").isNotEmpty());
+
+        System.out.println("✅ TEST 9 PASÓ: Imagen de marca subida a Cloudinary correctamente\n");
     }
 }

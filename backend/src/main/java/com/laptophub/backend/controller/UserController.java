@@ -1,5 +1,6 @@
 package com.laptophub.backend.controller;
 
+import com.laptophub.backend.dto.ChangePasswordDTO;
 import com.laptophub.backend.dto.UserRegisterDTO;
 import com.laptophub.backend.dto.UserResponseDTO;
 import com.laptophub.backend.dto.UserUpdateDTO;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -61,5 +63,13 @@ public class UserController {
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public UserResponseDTO reactivate(@PathVariable UUID id) {
         return userService.reactivateUser(id);
+    }
+
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<Void> changePassword(
+            @PathVariable UUID id,
+            @Valid @RequestBody ChangePasswordDTO dto) {
+        userService.changePassword(id, dto);
+        return ResponseEntity.noContent().build();
     }
 }

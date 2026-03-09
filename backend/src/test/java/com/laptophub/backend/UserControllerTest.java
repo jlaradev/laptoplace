@@ -301,4 +301,41 @@ public class UserControllerTest {
 
         System.out.println("✅ TEST 9 PASÓ: Usuario reactivado puede autenticarse\n");
     }
+
+    /**
+     * TEST 10: Cambiar contraseña (PATCH /api/users/{id}/password) y verificar login con la nueva
+     */
+    @Test
+    @Order(10)
+    public void test10_ChangePassword() throws Exception {
+        System.out.println("\n=== TEST 10: Cambiar contraseña (PATCH /api/users/{id}/password) ===");
+
+        String body = "{\"newPassword\":\"newpass456\"}";
+
+        mockMvc.perform(patch("/api/users/" + userId + "/password")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andDo(print())
+                .andExpect(status().isNoContent());
+
+        // Verificar que la contraseña antigua ya no funciona
+        String oldLoginBody = "{\"email\":\"" + TEST_EMAIL + "\",\"password\":\"password123\"}";
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(oldLoginBody))
+                .andDo(print())
+                .andExpect(status().isBadRequest());
+
+        // Verificar que la nueva contraseña sí funciona
+        String newLoginBody = "{\"email\":\"" + TEST_EMAIL + "\",\"password\":\"newpass456\"}";
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLoginBody))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").isNotEmpty());
+
+        System.out.println("✅ TEST 10 PASÓ: Contraseña cambiada y verificada correctamente\n");
+    }
 }

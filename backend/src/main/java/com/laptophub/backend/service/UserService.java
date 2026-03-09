@@ -1,6 +1,7 @@
 package com.laptophub.backend.service;
 
 
+import com.laptophub.backend.dto.ChangePasswordDTO;
 import com.laptophub.backend.dto.DTOMapper;
 import com.laptophub.backend.dto.UserRegisterDTO;
 import com.laptophub.backend.dto.UserResponseDTO;
@@ -109,5 +110,13 @@ public class UserService {
         }
         user.setDeletedAt(null);
         return DTOMapper.toUserResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public void changePassword(UUID id, ChangePasswordDTO dto) {
+        User user = findById(id);
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
     }
 }

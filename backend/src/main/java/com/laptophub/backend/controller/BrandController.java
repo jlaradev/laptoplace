@@ -7,9 +7,13 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/brands")
@@ -56,5 +60,13 @@ public class BrandController {
     @PreAuthorize("hasRole('ADMIN')")
     public BrandResponseDTO reactivate(@PathVariable Long id) {
         return brandService.reactivateBrand(id);
+    }
+
+    @PostMapping("/{id}/image")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BrandResponseDTO> uploadImage(
+            @PathVariable Long id,
+            @RequestParam MultipartFile file) throws IOException {
+        return ResponseEntity.ok(brandService.uploadImage(id, file));
     }
 }
