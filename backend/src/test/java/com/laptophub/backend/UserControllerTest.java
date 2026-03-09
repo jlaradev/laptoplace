@@ -338,4 +338,41 @@ public class UserControllerTest {
 
         System.out.println("✅ TEST 10 PASÓ: Contraseña cambiada y verificada correctamente\n");
     }
+
+    /**
+     * TEST 11: Cambiar rol de usuario (PATCH /api/users/{id}/role)
+     */
+    @Test
+    @Order(11)
+    public void test11_ChangeRole() throws Exception {
+        System.out.println("\n=== TEST 11: Cambiar rol (PATCH /api/users/{id}/role) ===");
+
+        // Promover a ADMIN
+        mockMvc.perform(patch("/api/users/" + userId + "/role")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("role", "ADMIN"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+
+        // Degradar a USER
+        mockMvc.perform(patch("/api/users/" + userId + "/role")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("role", "USER"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("USER"));
+
+        // Sin token de admin → 403
+        // Obtenemos un token fresco de USER (la contraseña del userId fue cambiada en test10)
+        String freshUserToken = TestAuthHelper.login(mockMvc, objectMapper, TEST_EMAIL, "newpass456");
+        mockMvc.perform(patch("/api/users/" + userId + "/role")
+                        .header("Authorization", "Bearer " + freshUserToken)
+                        .param("role", "ADMIN"))
+                .andDo(print())
+                .andExpect(status().isForbidden());
+
+        System.out.println("✅ TEST 11 PASÓ: Rol cambiado y acceso sin admin denegado\n");
+    }
 }

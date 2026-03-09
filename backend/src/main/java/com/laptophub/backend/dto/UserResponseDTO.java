@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.laptophub.backend.model.Role;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,6 +20,7 @@ public class UserResponseDTO {
     private String apellido;
     private String telefono;
     private String direccion;
+    private Role role;
     private LocalDateTime createdAt;
     private LocalDateTime deletedAt;
 }

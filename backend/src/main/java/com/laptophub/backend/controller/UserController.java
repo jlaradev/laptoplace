@@ -4,6 +4,7 @@ import com.laptophub.backend.dto.ChangePasswordDTO;
 import com.laptophub.backend.dto.UserRegisterDTO;
 import com.laptophub.backend.dto.UserResponseDTO;
 import com.laptophub.backend.dto.UserUpdateDTO;
+import com.laptophub.backend.model.Role;
 import com.laptophub.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -71,5 +72,13 @@ public class UserController {
             @Valid @RequestBody ChangePasswordDTO dto) {
         userService.changePassword(id, dto);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/role")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public UserResponseDTO changeRole(
+            @PathVariable UUID id,
+            @RequestParam Role role) {
+        return userService.changeRole(id, role);
     }
 }

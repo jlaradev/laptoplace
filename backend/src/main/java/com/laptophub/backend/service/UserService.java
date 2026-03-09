@@ -6,6 +6,7 @@ import com.laptophub.backend.dto.DTOMapper;
 import com.laptophub.backend.dto.UserRegisterDTO;
 import com.laptophub.backend.dto.UserResponseDTO;
 import com.laptophub.backend.dto.UserUpdateDTO;
+import com.laptophub.backend.model.Role;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.UserRepository;
 import com.laptophub.backend.exception.ConflictException;
@@ -118,5 +119,13 @@ public class UserService {
         User user = findById(id);
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Transactional
+    @SuppressWarnings("null")
+    public UserResponseDTO changeRole(UUID id, Role role) {
+        User user = findById(id);
+        user.setRole(role);
+        return DTOMapper.toUserResponse(userRepository.save(user));
     }
 }

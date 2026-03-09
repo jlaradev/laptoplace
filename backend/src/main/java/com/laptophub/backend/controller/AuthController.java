@@ -2,14 +2,18 @@ package com.laptophub.backend.controller;
 
 import com.laptophub.backend.dto.AuthRequestDTO;
 import com.laptophub.backend.dto.AuthResponseDTO;
+import com.laptophub.backend.dto.ForgotPasswordDTO;
+import com.laptophub.backend.dto.ResetPasswordDTO;
 import com.laptophub.backend.exception.TooManyRequestsException;
 import com.laptophub.backend.exception.ValidationException;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.UserRepository;
 import com.laptophub.backend.security.JwtService;
 import com.laptophub.backend.security.LoginRateLimiterService;
+import com.laptophub.backend.service.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,19 +35,22 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final LoginRateLimiterService rateLimiterService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(
             AuthenticationManager authenticationManager,
             UserDetailsService userDetailsService,
             JwtService jwtService,
             UserRepository userRepository,
-            LoginRateLimiterService rateLimiterService
+            LoginRateLimiterService rateLimiterService,
+            PasswordResetService passwordResetService
     ) {
         this.authenticationManager = authenticationManager;
         this.userDetailsService = userDetailsService;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.rateLimiterService = rateLimiterService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/login")
@@ -95,5 +102,17 @@ public class AuthController {
         }
         
         return request.getRemoteAddr();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordDTO dto) {
+        passwordResetService.requestReset(dto);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
+        passwordResetService.resetPassword(dto);
+        return ResponseEntity.noContent().build();
     }
 }

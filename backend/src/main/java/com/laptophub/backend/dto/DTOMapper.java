@@ -19,6 +19,7 @@ public class DTOMapper {
                 .apellido(user.getApellido())
                 .telefono(user.getTelefono())
                 .direccion(user.getDireccion())
+                .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .deletedAt(user.getDeletedAt())
                 .build();
