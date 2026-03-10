@@ -26,8 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests de integración para el flujo completo de restablecimiento de contraseña.
  *
- * IMPORTANTE: Este test envía un correo real a juanpablo3501@hotmail.com.
- * Asegúrate de tener MAIL_USERNAME y MAIL_PASSWORD configurados en .env antes de ejecutarlo.
+ * IMPORTANTE: Este test envía un correo REAL vía Brevo.
+ * Asegúrate de tener BREVO_API_KEY y BREVO_SENDER_EMAIL configurados en .env.
  *
  * Ejecutar con:
  *   cd backend && ./mvnw test -Dtest="PasswordResetTest" -DfailIfNoTests=false
@@ -82,7 +82,7 @@ public class PasswordResetTest {
     }
 
     /**
-     * TEST 2: Solicitar reset → endpoint siempre responde 200 y envía correo real
+     * TEST 2: Solicitar reset → endpoint siempre responde 200 y envía correo vía Brevo
      */
     @Test
     @Order(2)
@@ -103,8 +103,7 @@ public class PasswordResetTest {
 
         tokenId = tokens.get(0).getId().toString();
 
-        System.out.println("✅ TEST 2 PASÓ: Correo enviado y token generado: " + tokenId);
-        System.out.println("   Revisa la bandeja de juanpablo3501@hotmail.com\n");
+        System.out.println("✅ TEST 2 PASÓ: Token generado (correo mockeado): " + tokenId + "\n");
     }
 
     /**

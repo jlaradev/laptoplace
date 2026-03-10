@@ -7,7 +7,6 @@ import com.laptophub.backend.model.PasswordResetToken;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.PasswordResetTokenRepository;
 import com.laptophub.backend.repository.UserRepository;
-import jakarta.mail.MessagingException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,11 +44,7 @@ public class PasswordResetService {
                     .build();
             tokenRepository.save(token);
 
-            try {
-                emailService.sendPasswordResetEmail(user.getEmail(), token.getId().toString());
-            } catch (MessagingException e) {
-                throw new RuntimeException("Error al enviar el correo de restablecimiento", e);
-            }
+            emailService.sendPasswordResetEmail(user.getEmail(), token.getId().toString());
         });
     }
 

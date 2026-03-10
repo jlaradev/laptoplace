@@ -1,40 +1,50 @@
 package com.laptophub.backend.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings("null")
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${spring.mail.username}")
-    private String from;
+    @Value("${brevo.api-key}")
+    private String brevoApiKey;
+
+    @Value("${brevo.sender-email}")
+    private String senderEmail;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
+    public void sendPasswordResetEmail(String toEmail, String token) {
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+        String htmlBody = buildEmailBody(resetLink);
 
-    public void sendPasswordResetEmail(String toEmail, String token) throws MessagingException {
-        String link = frontendUrl + "/reset-password?token=" + token;
+        try {
+            Map<String, Object> payload = Map.of(
+                "sender", Map.of("name", "LaptoPlace", "email", senderEmail),
+                "to", List.of(Map.of("email", toEmail)),
+                "subject", "Restablece tu contraseña - LaptoPlace",
+                "htmlContent", htmlBody
+            );
 
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", brevoApiKey);
 
-        helper.setFrom(from);
-        helper.setTo(toEmail);
-        helper.setSubject("Restablece tu contraseña - LaptoPlace");
-        helper.setText(buildEmailBody(link), true);
-
-        mailSender.send(message);
+            HttpEntity<String> request = new HttpEntity<>(objectMapper.writeValueAsString(payload), headers);
+            new RestTemplate().postForObject("https://api.brevo.com/v3/smtp/email", request, Object.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al enviar correo por Brevo: " + e.getMessage(), e);
+        }
     }
 
     private String buildEmailBody(String resetLink) {
@@ -52,3 +62,5 @@ public class EmailService {
                 """.formatted(resetLink);
     }
 }
+
+
