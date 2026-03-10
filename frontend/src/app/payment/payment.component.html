@@ -31,35 +31,35 @@
             <label class="block font-semibold mb-2">Dirección de entrega</label>
             
             <!-- Si NO hay dirección: campo de entrada obligatorio -->
-            <div *ngIf="!direccionUsuario">
+            <div *ngIf="!direccionUsuario()">
               <input 
                 class="border rounded px-3 py-2 w-full mb-2" 
-                [(ngModel)]="direccionEnvio" 
+                [ngModel]="direccionEnvio()" (ngModelChange)="direccionEnvio.set($event)"
                 placeholder="Ingresa tu dirección de entrega"
                 name="nuevaDireccion"
               />
               <button 
                 class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" 
                 (click)="iniciarPago()" 
-                [disabled]="!direccionEnvio || loading"
+                [disabled]="!direccionEnvio() || loading"
               >
                 {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
               </button>
             </div>
             
             <!-- Si YA hay dirección: mostrar y permitir cambiarla -->
-            <div *ngIf="direccionUsuario">
+            <div *ngIf="direccionUsuario()">
               <div *ngIf="!mostrarFormularioDireccion">
-                <div class="mb-2">{{ direccionEnvio }}</div>
+                <div class="mb-2">{{ direccionEnvio() }}</div>
                 <button class="px-4 py-1 payment-btn-gray mr-2" (click)="usarOtraDireccion()">Usar otra dirección</button>
-                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio || loading">
+                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio() || loading">
                   {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
                 </button>
               </div>
               <div *ngIf="mostrarFormularioDireccion">
-                <input class="border rounded px-3 py-2 w-full mb-2" [(ngModel)]="direccionEnvio" placeholder="Ingresa nueva dirección" name="otraDireccion" />
+                <input class="border rounded px-3 py-2 w-full mb-2" [ngModel]="direccionEnvio()" (ngModelChange)="direccionEnvio.set($event)" placeholder="Ingresa nueva dirección" name="otraDireccion" />
                 <button class="px-4 py-1 payment-btn-gray mr-2" (click)="cancelarOtraDireccion()">Cancelar</button>
-                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio || loading">
+                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio() || loading">
                   {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
                 </button>
               </div>
@@ -85,6 +85,22 @@
             *ngIf="clientSecret && items.length > 0 && direccionConfirmada"
           >
             {{ loading ? 'Procesando pago...' : 'Confirmar pago' }}
+          </button>
+          <!-- Botón secundario: mismo lugar, misma anchura -->
+          <button
+            *ngIf="!direccionConfirmada"
+            class="px-6 py-2 bg-gray-200 text-gray-700 rounded font-semibold shadow hover:bg-gray-300 transition mt-3 w-full"
+            (click)="volverAlCarrito()"
+          >
+            Volver al carrito
+          </button>
+          <button
+            *ngIf="direccionConfirmada"
+            class="px-6 py-2 bg-red-100 text-red-700 rounded font-semibold shadow hover:bg-red-200 transition mt-3 w-full"
+            [disabled]="loading || cancelando"
+            (click)="cancelarPedido()"
+          >
+            {{ cancelando ? 'Cancelando...' : 'Cancelar pedido' }}
           </button>
         </div>
       </div>

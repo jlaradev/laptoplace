@@ -8,7 +8,6 @@ import { FooterComponent } from '../components/footer.component';
 import { CartService } from '../services/cart.service';
 import { AuthService } from '../services/auth.service';
 import { OrderService } from '../services/order.service';
-import { ReviewService } from '../services/review.service';
 import { signal } from '@angular/core';
 import { map, catchError } from 'rxjs/operators';
 import { of, Observable } from 'rxjs';
@@ -44,18 +43,20 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
               <div>
                 <ng-container *ngIf="imagenesOrdenadas && imagenesOrdenadas.length; else noImage">
                   <div class="relative flex flex-col items-center">
-                    <div class="w-full max-w-4xl flex flex-col items-center">
+                    <!-- Contenedor con tamaño fijo para evitar layout shift -->
+                    <div class="w-[30rem] h-[30rem] bg-gray-50 rounded border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden">
                       <img
                         [src]="imagenesOrdenadas[currentImageIndex].url"
                         alt="Imagen del producto"
-                        class="rounded border border-gray-200 shadow-sm object-contain"
-                        style="max-width: 1000px; max-height: 700px; min-height: 400px; background: #f8fafc;"
+                        class="w-full h-full object-contain"
                       >
-                      <div class="text-lg text-gray-600 text-center mt-2">
-                        {{ imagenesOrdenadas[currentImageIndex].descripcion }}
-                      </div>
                     </div>
-                    <div class="flex justify-center items-center gap-4 mt-3">
+                    <!-- Descripción de la imagen -->
+                    <div class="text-lg text-gray-600 text-center mt-4 min-h-10">
+                      {{ imagenesOrdenadas[currentImageIndex].descripcion }}
+                    </div>
+                    <!-- Controles de navegación -->
+                    <div class="flex justify-center items-center gap-4 mt-4">
                       <button (click)="showPrevImage()" class="px-3 py-1 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-lg" [disabled]="imagenesOrdenadas.length < 2">&#8592;</button>
                       <span class="text-xs text-slate-500">{{ currentImageIndex + 1 }} / {{ imagenesOrdenadas.length }}</span>
                       <button (click)="showNextImage()" class="px-3 py-1 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-lg" [disabled]="imagenesOrdenadas.length < 2">&#8594;</button>
@@ -63,10 +64,10 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
                   </div>
                 </ng-container>
                 <ng-template #noImage>
-                  <div class="w-full max-w-4xl flex flex-col items-center">
-                    <div class="flex items-center justify-center rounded border border-gray-200 shadow-sm object-contain bg-gray-200 text-gray-500"
-                      style="max-width: 1000px; max-height: 700px; min-height: 400px; width: 100%; height: 100%;">
-                      <span class="text-2xl font-semibold">Imagen no disponible</span>
+                  <!-- Contenedor con tamaño fijo para "sin imagen" también -->
+                  <div class="flex flex-col items-center">
+                    <div class="w-[30rem] h-[30rem] bg-gray-200 rounded border border-gray-200 shadow-sm flex items-center justify-center">
+                      <span class="text-2xl font-semibold text-gray-500">Imagen no disponible</span>
                     </div>
                   </div>
                 </ng-template>
@@ -188,7 +189,6 @@ export class ProductDetailComponent implements OnInit {
   private cartService = inject(CartService);
   private authService = inject(AuthService);
   private orderService = inject(OrderService);
-  private reviewService = inject(ReviewService);
   toastMsg: string | null = null;
   toastVisible = signal<boolean>(false);
   isLoggedIn = false;
@@ -228,28 +228,11 @@ export class ProductDetailComponent implements OnInit {
             if (userId) {
               this.checkingPurchase.set(true);
               this.orderService.isProductPurchased(userId, id).subscribe({
-                next: (resp: any) => {
+                next: (resp) => {
                   this.hasPurchased.set(resp.purchased);
-                  // Si compró, verificar si ya tiene reseña
-                  if (resp.purchased) {
-                    this.reviewService.getUserReviewForProduct(id, userId).subscribe({
-                      next: (review: any) => {
-                        if (review && review.id) {
-                          this.existingReviewId.set(review.id);
-                        }
-                        this.checkingPurchase.set(false);
-                        this.cdr.detectChanges();
-                      },
-                      error: () => {
-                        this.existingReviewId.set(null);
-                        this.checkingPurchase.set(false);
-                        this.cdr.detectChanges();
-                      }
-                    });
-                  } else {
-                    this.checkingPurchase.set(false);
-                    this.cdr.detectChanges();
-                  }
+                  this.existingReviewId.set(resp.reviewId ?? null);
+                  this.checkingPurchase.set(false);
+                  this.cdr.detectChanges();
                 },
                 error: () => {
                   this.hasPurchased.set(false);

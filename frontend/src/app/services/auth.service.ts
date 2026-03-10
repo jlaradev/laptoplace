@@ -19,6 +19,12 @@ export interface AuthResponse {
   providedIn: 'root'
 })
 export class AuthService {
+      registerUser(data: { email: string; password: string; nombre: string; apellido: string; telefono?: string; direccion?: string }): Observable<any> {
+        return this.http.post<any>('https://laptophub-cigv.onrender.com/api/users/register', data);
+      }
+    resetPassword(token: string, password: string): Observable<any> {
+      return this.http.post<any>(`${this.apiBaseUrl}/reset-password`, { token, password });
+    }
   private apiBaseUrl = 'https://laptophub-cigv.onrender.com/api/auth';
   private isLoggedIn$ = new BehaviorSubject<boolean>(this.hasToken());
 
@@ -63,4 +69,12 @@ export class AuthService {
   getUserEmail(): string | null {
     return localStorage.getItem('email');
   }
+
+  getUserId(): string | null {
+    return localStorage.getItem('userId');
+  }
+
+    forgotPassword(email: string): Observable<any> {
+      return this.http.post<any>(`${this.apiBaseUrl}/forgot-password`, { email });
+    }
 }

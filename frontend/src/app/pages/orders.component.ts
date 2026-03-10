@@ -5,6 +5,7 @@ import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 import { OrderService, OrderResponseDTO, OrderPage } from '../services/order.service';
 import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-orders',
@@ -90,6 +91,7 @@ import { AuthService } from '../services/auth.service';
 export class OrdersComponent implements OnInit {
   private orderService = inject(OrderService);
   private authService = inject(AuthService);
+  private router = inject(Router);
 
   orders = signal<OrderResponseDTO[]>([]);
   loading = signal(false);
@@ -176,5 +178,10 @@ export class OrdersComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/']);
   }
 }

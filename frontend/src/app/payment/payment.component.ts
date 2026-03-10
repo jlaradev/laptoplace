@@ -1,5 +1,6 @@
 // ...existing imports...
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { PaymentService, PaymentResponseDTO } from './payment.service';
 import { OrderService } from '../services/order.service';
 import { UserService, User } from '../services/user.service';
@@ -8,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
+import { AuthService } from '../services/auth.service';
 
 declare var Stripe: any;
 const STRIPE_PUBLISHABLE_KEY = (window as any).APP_CONFIG?.stripePublishableKey;
@@ -43,12 +45,14 @@ export class PaymentComponent implements OnInit {
   total: number = 0;
   items: any[] = [];
 
-  direccionEnvio: string = '';
+  direccionEnvio = signal<string>('');
   direccionConfirmada: boolean = false;
   mostrarFormularioDireccion: boolean = false;
-  direccionUsuario: string = '';
+  direccionUsuario = signal<string>('');
   userId: string | null = null;
-  userLoaded: boolean = false;
+  userLoaded: boolean = true;
+  orderId: number | null = null;
+  cancelando: boolean = false;
 
   @ViewChild('paymentForm') paymentFormRef!: ElementRef;
 
@@ -57,7 +61,8 @@ export class PaymentComponent implements OnInit {
     private orderService: OrderService,
     private userService: UserService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -73,14 +78,11 @@ export class PaymentComponent implements OnInit {
       // Obtener dirección del usuario
       this.userService.getUserById(this.userId).subscribe({
         next: (user: User) => {
-          this.direccionUsuario = user.direccion || '';
-          this.direccionEnvio = this.direccionUsuario;
-          this.userLoaded = true;
-          this.cdr.detectChanges();
+          this.direccionUsuario.set(user.direccion || '');
+          this.direccionEnvio.set(user.direccion || '');
         },
-        error: (err) => {
+        error: () => {
           this.error = 'No se pudo obtener la dirección del usuario.';
-          this.userLoaded = true;
         }
       });
     } else {
@@ -95,12 +97,13 @@ export class PaymentComponent implements OnInit {
     }
     this.loading = true;
     const orderPayload = { 
-      direccionEnvio: this.direccionEnvio,
+      direccionEnvio: this.direccionEnvio(),
       items: this.items
     };
     this.orderService.createOrderFromCart(this.userId, orderPayload).subscribe({
       next: (orderResp) => {
         if (orderResp.payment && orderResp.payment.clientSecret) {
+          this.orderId = orderResp.id;
           this.paymentResponse = orderResp.payment;
           this.clientSecret = orderResp.payment.clientSecret;
           this.direccionConfirmada = true;
@@ -134,12 +137,12 @@ export class PaymentComponent implements OnInit {
 
   usarOtraDireccion() {
     this.mostrarFormularioDireccion = true;
-    this.direccionEnvio = '';
+    this.direccionEnvio.set('');
   }
 
   cancelarOtraDireccion() {
     this.mostrarFormularioDireccion = false;
-    this.direccionEnvio = this.direccionUsuario;
+    this.direccionEnvio.set(this.direccionUsuario());
   }
 
   setupPaymentElement() {
@@ -184,6 +187,35 @@ export class PaymentComponent implements OnInit {
 
   mostrarOverlayError = false;
   mostrarOverlayAprobada = false;
+
+  volverAlCarrito() {
+    this.router.navigate(['/cart']);
+  }
+
+  cancelarPedido() {
+    if (this.cancelando || this.loading) return;
+    this.cancelando = true;
+    const obs: any[] = [];
+    if (this.paymentResponse?.id) {
+      obs.push(this.paymentService.cancelPayment(this.paymentResponse.id));
+    }
+    if (this.orderId) {
+      obs.push(this.orderService.cancelOrder(this.orderId));
+    }
+    if (obs.length === 0) {
+      this.router.navigate(['/cart']);
+      return;
+    }
+    forkJoin(obs).subscribe({
+      next: () => this.router.navigate(['/cart']),
+      error: () => this.router.navigate(['/cart'])
+    });
+  }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/']);
+  }
 
   public showToast(message: string, isError: boolean = false): void {
     this.toastMsg = message;

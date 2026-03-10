@@ -41,6 +41,8 @@ export interface OrderPage {
 
 export interface PurchasedResponseDTO {
   purchased: boolean;
+  hasReview: boolean;
+  reviewId: number | null;
 }
 
 export interface ReviewableProductDTO {
@@ -82,6 +84,16 @@ export class OrderService {
   }
 
   /**
+   * Obtiene todas las órdenes (admin)
+   */
+  getOrders(page: number = 0, size: number = 20): Observable<OrderPage> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<OrderPage>(this.apiUrl, { params });
+  }
+
+  /**
    * Obtiene órdenes por estado específico
    */
   getOrdersByStatus(status: string, page: number = 0, size: number = 10): Observable<OrderPage> {
@@ -99,6 +111,13 @@ export class OrderService {
       .set('page', page.toString())
       .set('size', size.toString());
     return this.http.get<OrderPage>(`${this.apiUrl}/user/${userId}/active`, { params });
+  }
+
+  /**
+   * Cancela una orden pendiente de pago
+   */
+  cancelOrder(orderId: number): Observable<OrderResponseDTO> {
+    return this.http.post<OrderResponseDTO>(`${this.apiUrl}/${orderId}/cancel`, {});
   }
 
   /**

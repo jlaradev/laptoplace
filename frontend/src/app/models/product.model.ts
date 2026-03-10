@@ -1,3 +1,5 @@
+import { Brand } from './brand.model';
+
 export interface ProductImage {
   id: number;
   url: string;
@@ -10,9 +12,18 @@ export interface Product {
   nombre: string;
   precio: number;
   stock: number;
-  marca: string;
+  marca?: string;
+  brandId?: number;
+  brand?: Brand;  // El backend devuelve el objeto brand completo
   imagenPrincipal?: ProductImage;
   promedioRating: number;
+  descripcion?: string;
+  procesador?: string;
+  ram?: number;
+  almacenamiento?: number;
+  pantalla?: string;
+  gpu?: string;
+  peso?: number;
 }
 
 export interface ProductPage {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface CreatePaymentDTO {
@@ -17,6 +17,14 @@ export interface PaymentResponseDTO {
   createdAt: string;
 }
 
+export interface PaymentPage {
+  content: PaymentResponseDTO[];
+  number: number;
+  totalPages: number;
+  totalElements: number;
+  size: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PaymentService {
   // Use API base from public config if available, otherwise fallback to relative path
@@ -27,5 +35,39 @@ export class PaymentService {
   createPayment(dto: CreatePaymentDTO): Observable<PaymentResponseDTO> {
     console.log('[PaymentService] POST', `${this.apiUrl}/create`, dto);
     return this.http.post<PaymentResponseDTO>(`${this.apiUrl}/create`, dto);
+  }
+
+  /**
+   * Obtiene todos los pagos (admin)
+   */
+  getPayments(page: number = 0, size: number = 20): Observable<PaymentPage> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<PaymentPage>(this.apiUrl, { params });
+  }
+
+  /**
+   * Obtiene un pago por ID
+   */
+  getPaymentById(id: number): Observable<PaymentResponseDTO> {
+    return this.http.get<PaymentResponseDTO>(`${this.apiUrl}/${id}`);
+  }
+
+  /**
+   * Cancela un pago y su PaymentIntent en Stripe
+   */
+  cancelPayment(paymentId: number): Observable<PaymentResponseDTO> {
+    return this.http.post<PaymentResponseDTO>(`${this.apiUrl}/${paymentId}/cancel`, {});
+  }
+
+  /**
+   * Obtiene pagos por estado
+   */
+  getPaymentsByStatus(status: string, page: number = 0, size: number = 20): Observable<PaymentPage> {
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+    return this.http.get<PaymentPage>(`${this.apiUrl}/status/${status}`, { params });
   }
 }

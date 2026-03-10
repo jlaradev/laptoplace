@@ -33,7 +33,15 @@ import { UserService, User } from '../services/user.service';
                 </div>
                 <div *ngIf="getItems().length > 0">
                   <div *ngFor="let item of getItems()" class="flex items-center gap-3 px-4 py-2 border-b last:border-b-0">
-                    <img *ngIf="item.product?.imagenUrl" [src]="item.product.imagenUrl" alt="img" class="w-12 h-12 object-contain rounded" />
+                    <div class="w-10 h-10 flex-shrink-0 rounded border bg-slate-50 flex items-center justify-center overflow-hidden">
+                      <img *ngIf="item.product?.imagenPrincipal?.url; else noImgHeader"
+                           [src]="item.product.imagenPrincipal.url"
+                           alt="img"
+                           class="w-full h-full object-contain" />
+                      <ng-template #noImgHeader>
+                        <span class="text-[7px] text-slate-400 text-center leading-tight px-0.5">Sin imagen</span>
+                      </ng-template>
+                    </div>
                     <div class="flex-1">
                       <div class="font-semibold text-slate-900 text-sm">{{ item.product?.nombre }}</div>
                       <div class="text-xs text-slate-600">Cantidad: {{ item.cantidad }}</div>
@@ -245,6 +253,18 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   logout() {
     this.authService.logout();
-    window.location.reload();
+    // Definir rutas públicas donde solo se recarga
+    const publicRoutes = ['/', '/catalog', '/compare', '/brands', '/login', '/register'];
+    const currentUrl = this.router.url.split('?')[0];
+    // Si es ruta de admin, redirigir a admin-login
+    if (currentUrl.startsWith('/admin')) {
+      this.router.navigate(['/admin-login']);
+      return;
+    }
+    if (publicRoutes.includes(currentUrl)) {
+      window.location.reload();
+    } else {
+      this.router.navigate(['/']);
+    }
   }
 }

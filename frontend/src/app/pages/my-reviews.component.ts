@@ -4,12 +4,12 @@ import { Router } from '@angular/router';
 import { OrderService } from '../services/order.service';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
-import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-my-reviews',
   standalone: true,
-  imports: [CommonModule, HeaderComponent, FooterComponent, RoundDecimalPipe],
+  imports: [CommonModule, HeaderComponent, FooterComponent],
   template: `
     <div class="flex flex-col min-h-screen bg-white">
       <app-header></app-header>
@@ -103,7 +103,8 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
 export class MyReviewsComponent implements OnInit {
   private orderService = inject(OrderService);
   private cdr = inject(ChangeDetectorRef);
-  router = inject(Router);
+  private authService = inject(AuthService);
+  public router = inject(Router);
 
   loading = true;
   loadingMore = false;
@@ -182,5 +183,10 @@ export class MyReviewsComponent implements OnInit {
       params.reviewId = product.reviewId;
     }
     this.router.navigate(['/product', product.id, 'review'], { queryParams: params });
+  }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/']);
   }
 }

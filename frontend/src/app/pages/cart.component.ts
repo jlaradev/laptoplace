@@ -32,7 +32,14 @@ import { FormsModule } from '@angular/forms';
             <div *ngIf="!loading && items.length === 0" class="text-center text-slate-500 py-12">Tu carrito está vacío.</div>
             <div *ngIf="items.length > 0" class="space-y-4">
               <div *ngFor="let item of items" class="flex items-center gap-4 p-4 border rounded">
-                <img *ngIf="item.product?.imagenUrl" [src]="item.product.imagenUrl" class="w-20 h-20 object-contain" />
+                <div class="w-16 h-16 flex-shrink-0 rounded overflow-hidden border bg-slate-50 flex items-center justify-center">
+                  <img *ngIf="item.product?.imagenPrincipal?.url; else noImg"
+                       [src]="item.product.imagenPrincipal.url"
+                       class="w-full h-full object-contain" />
+                  <ng-template #noImg>
+                    <span class="text-[9px] text-slate-400 text-center leading-tight px-1">Imagen no disponible</span>
+                  </ng-template>
+                </div>
                 <div class="flex-1">
                   <div class="font-semibold">{{ item.product?.nombre }}</div>
                   <div class="text-sm text-slate-600">Valor unitario: {{ item.product?.precio | currency:'USD':'symbol':'1.2-2' }}</div>

@@ -1,4 +1,4 @@
-export type OrderStatus = 'pendiente_pago' | 'procesando' | 'enviado' | 'entregado' | 'cancelado' | 'expirado';
+export type OrderStatus = 'PENDIENTE_PAGO' | 'PROCESANDO' | 'ENVIADO' | 'ENTREGADO' | 'CANCELADO' | 'EXPIRADO';
 
 export interface OrderItem {
   id: number;
@@ -9,19 +9,24 @@ export interface OrderItem {
   subtotal: number;
 }
 
+export interface OrderPayment {
+  id: number;
+  estado: 'PENDIENTE' | 'COMPLETADO' | 'FALLIDO';
+  amount: number;
+  stripeId?: string;
+  createdAt?: string;
+}
+
 export interface Order {
   id: number;
   userId: string;
+  usuarioEmail: string;
   total: number;
   estado: OrderStatus;
   direccionEnvio: string;
   expiresAt: string | null;
   items: OrderItem[];
-  payment: {
-    id: number;
-    status: string;
-    amount: number;
-  } | null;
+  payment: OrderPayment | null;
   createdAt: string;
 }
 
@@ -31,4 +36,8 @@ export interface OrderPage {
   totalPages: number;
   totalElements: number;
   size: number;
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+  };
 }

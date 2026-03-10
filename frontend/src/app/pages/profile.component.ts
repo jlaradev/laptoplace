@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 import { UserService, User } from '../services/user.service';
+import { AuthService } from '../services/auth.service';
+import { Router } from '@angular/router';
+import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-profile',
@@ -134,7 +137,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   constructor(
     private userService: UserService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private authService: AuthService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -169,5 +174,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       console.warn('[Profile] No se encontró userId en LocalStorage');
       this.user = null;
     }
+  }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/']);
   }
 }

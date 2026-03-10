@@ -73,10 +73,55 @@ import { AuthService } from '../services/auth.service';
                 </span>
               </button>
             </form>
+            <!-- Forgot Password Button -->
+            <div class="mt-4 text-center">
+              <button
+                type="button"
+                class="text-blue-600 hover:underline text-sm font-semibold"
+                (click)="showForgot = true"
+                *ngIf="!showForgot"
+              >¿Olvidaste tu contraseña?</button>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div *ngIf="showForgot" class="mt-6">
+              <h2 class="text-xl font-bold mb-2">Recuperar contraseña</h2>
+              <form (ngSubmit)="handleForgotPassword()" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-900 mb-2">Correo electrónico</label>
+                  <input
+                    type="email"
+                    [(ngModel)]="forgotEmail"
+                    name="forgotEmail"
+                    placeholder="tu@correo.com"
+                    class="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 transition"
+                    [disabled]="forgotLoading()"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  [disabled]="forgotLoading()"
+                  class="w-full px-6 py-2 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span *ngIf="!forgotLoading()">Enviar enlace</span>
+                  <span *ngIf="forgotLoading()" class="flex items-center justify-center gap-2">
+                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Enviando...
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="w-full px-6 py-2 bg-slate-200 text-slate-700 rounded-full font-semibold hover:bg-slate-300 transition mt-2"
+                  (click)="showForgot = false"
+                >Cancelar</button>
+              </form>
+              <div *ngIf="forgotMessage" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-semibold">{{ forgotMessage }}</div>
+              <div *ngIf="forgotError" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-semibold">{{ forgotError }}</div>
+            </div>
 
             <!-- Info -->
             <p class="text-center text-slate-600 text-sm mt-6">
-              ¿No tienes cuenta? Pronto podrás registrarte aquí
+              ¿Aún no tienes cuenta? <a routerLink="/register" class="text-blue-600 hover:underline font-semibold">Regístrate aquí</a>
             </p>
           </div>
         </div>
@@ -96,6 +141,12 @@ export class LoginComponent {
   password = '';
   loading = signal(false);
   error = signal<string | null>(null);
+
+  showForgot = false;
+  forgotEmail = '';
+  forgotMessage: string | null = null;
+  forgotError: string | null = null;
+  forgotLoading = signal(false);
 
   constructor() {
     // Si ya está autenticado, redirigir automáticamente
@@ -121,7 +172,6 @@ export class LoginComponent {
 
     this.authService.login({ email: this.email, password: this.password }).subscribe({
       next: () => {
-        // Leer el parámetro de redirección si existe
         const redirect = this.route.snapshot.queryParamMap.get('redirect');
         if (redirect) {
           this.router.navigateByUrl(redirect);
@@ -132,6 +182,26 @@ export class LoginComponent {
       error: (err) => {
         this.loading.set(false);
         this.error.set(err.error?.message || 'Error al iniciar sesión. Por favor intenta de nuevo.');
+      }
+    });
+  }
+
+  handleForgotPassword() {
+    this.forgotMessage = null;
+    this.forgotError = null;
+    if (!this.forgotEmail) {
+      this.forgotError = 'Por favor ingresa tu correo electrónico';
+      return;
+    }
+    this.forgotLoading.set(true);
+    this.authService.forgotPassword(this.forgotEmail).subscribe({
+      next: () => {
+        this.forgotLoading.set(false);
+        this.forgotMessage = 'Enlace para restablecer contraseña enviado.';
+      },
+      error: (err) => {
+        this.forgotLoading.set(false);
+        this.forgotError = err.error?.message || 'Error al enviar el enlace. Intenta de nuevo.';
       }
     });
   }
