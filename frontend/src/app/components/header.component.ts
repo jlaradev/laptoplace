@@ -181,7 +181,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
   loadCart() {
     this.cartService.getCart().subscribe({
       next: data => {
-        console.log('[Header] loadCart response:', data);
         // overlay pending optimistic updates so dropdown doesn't revert
         const pending = this.cartService.getPendingUpdates?.() || {};
         if (data && data.items && Object.keys(pending).length > 0) {
@@ -199,7 +198,6 @@ export class HeaderComponent implements OnInit, OnDestroy {
         setTimeout(() => this.cartRaw.set(data), 0);
       },
       error: (err) => {
-        console.error('[Header] loadCart error:', err);
         setTimeout(() => this.cartRaw.set(null), 0);
       }
     });

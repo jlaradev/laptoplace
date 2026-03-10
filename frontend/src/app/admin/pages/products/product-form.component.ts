@@ -58,7 +58,6 @@ export class ProductFormComponent implements OnInit {
     this.brandService.getAllBrands().subscribe({
       next: (brands) => {
         this.brands.set(brands);
-        console.log('Marcas cargadas:', brands);
         // Una vez cargadas las marcas, cargar el producto
         this.loadProduct();
       },
@@ -107,7 +106,6 @@ export class ProductFormComponent implements OnInit {
         // product.brand = { id: 5, nombre: "Dell", ... }
         // Entonces convertimos product.brand.id a string para el formulario
         const brandIdValue = (product as any).brand?.id ? (product as any).brand.id.toString() : '';
-        console.log('Product brand:', (product as any).brand, '| brandId para form:', brandIdValue);
         
         this.form.patchValue({
           nombre: product.nombre,
@@ -126,12 +124,10 @@ export class ProductFormComponent implements OnInit {
         // Cargar imágenes del producto
         this.productService.getProductImages(this.productId!).subscribe({
           next: (images) => {
-            console.log('Imágenes cargadas:', images);
             this.productImages.set(images);
             this.isLoading.set(false);
           },
           error: (err) => {
-            console.error('Error al cargar imágenes:', err);
             this.isLoading.set(false);
           }
         });
@@ -342,7 +338,6 @@ export class ProductFormComponent implements OnInit {
             img.orden = newOrden;
           },
           error: (err) => {
-            console.error(`Error actualizando orden: ${err}`);
           }
         });
       }
@@ -365,7 +360,6 @@ export class ProductFormComponent implements OnInit {
           }
         },
         error: (err) => {
-          console.error(`Error subiendo imagen: ${err}`);
           pendingUploads--;
           if (pendingUploads === 0) {
             finalizeSyncImages();
@@ -406,7 +400,6 @@ export class ProductFormComponent implements OnInit {
                         resolve(null);
                       },
                       error: (err) => {
-                        console.error(`Error actualizando orden: ${err}`);
                         resolve(null);
                       }
                     });
@@ -460,7 +453,6 @@ export class ProductFormComponent implements OnInit {
                 resolve(null);
               },
               error: (err) => {
-                console.error(`Error updating image ${img.id}:`, err);
                 resolve(null);
               }
             });
@@ -505,7 +497,6 @@ export class ProductFormComponent implements OnInit {
                 resolve(null);
               },
               error: (err) => {
-                console.error(`Error updating image ${img.id}:`, err);
                 resolve(null);
               }
             });

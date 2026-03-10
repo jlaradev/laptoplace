@@ -154,24 +154,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   loadUser() {
     const userId = localStorage.getItem('userId');
-    console.log('[Profile] Buscando userId en LocalStorage:', userId);
 
     if (userId) {
       this.userSub = this.userService.getUserById(userId).subscribe({
         next: (u) => {
-          console.log('[Profile] Datos recibidos con éxito:', u);
           // Asignamos el usuario y forzamos a Angular a renderizar
           this.user = u;
           this.cdr.detectChanges(); 
         },
         error: (err) => {
-          console.error('[Profile] Error al obtener usuario:', err);
           this.user = null;
           this.cdr.detectChanges();
         }
       });
     } else {
-      console.warn('[Profile] No se encontró userId en LocalStorage');
       this.user = null;
     }
   }

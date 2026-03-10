@@ -62,7 +62,6 @@ export class App implements OnInit {
         this.loadingBrands.set(false);
       },
       error: (err) => {
-        console.error('Error loading brands:', err);
         this.loadingBrands.set(false);
       }
     });
@@ -76,7 +75,6 @@ export class App implements OnInit {
         this.loadingTopRated.set(false);
       },
       error: (err) => {
-        console.error('Error loading top rated products:', err);
         this.loadingTopRated.set(false);
       }
     });
@@ -93,7 +91,6 @@ export class App implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        console.error('Error loading products:', err);
         this.error.set('No se pudieron cargar los productos. Intenta de nuevo.');
         this.loading.set(false);
       }

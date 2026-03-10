@@ -165,7 +165,6 @@ export class CompareComponent {
           else this.results2.set(details);
         });
       }, (err: any) => {
-        console.error('[Compare] search error', err);
         if (n === 1) this.results1.set([]);
         else this.results2.set([]);
       });

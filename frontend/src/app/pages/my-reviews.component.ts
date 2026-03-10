@@ -27,17 +27,6 @@ import { AuthService } from '../services/auth.service';
         <ng-template #loaded>
           <div *ngIf="products.length > 0; else noProducts" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div *ngFor="let product of products" class="border rounded-lg shadow p-4 bg-white hover:shadow-md transition">
-              <!-- Imagen -->
-              <div class="mb-4">
-                <ng-container *ngIf="product.imagenPrincipal?.url; else noImage">
-                  <img [src]="product.imagenPrincipal.url" alt="{{ product.nombre }}" class="w-full h-40 object-contain rounded" />
-                </ng-container>
-                <ng-template #noImage>
-                  <div class="w-full h-40 flex items-center justify-center bg-slate-100 rounded">
-                    <span class="text-slate-400 text-sm">Imagen no disponible</span>
-                  </div>
-                </ng-template>
-              </div>
 
               <!-- Nombre y precio -->
               <h3 class="font-semibold text-lg mb-1">{{ product.nombre }}</h3>
@@ -141,7 +130,6 @@ export class MyReviewsComponent implements OnInit {
         }, 0);
       },
       error: (err) => {
-        console.error('Error loading reviewable products:', err);
         setTimeout(() => {
           this.error = 'No se pudieron cargar los productos disponibles para reseña';
           this.loading = false;
@@ -169,7 +157,6 @@ export class MyReviewsComponent implements OnInit {
         }, 0);
       },
       error: (err) => {
-        console.error('Error loading more products:', err);
         this.currentPage--;
         this.loadingMore = false;
         this.cdr.markForCheck();

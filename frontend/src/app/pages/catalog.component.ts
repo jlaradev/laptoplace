@@ -132,7 +132,6 @@ export class CatalogComponent {
         this.allBrands.set(brands);
       },
       error: (err) => {
-        console.error('Error loading brands:', err);
       }
     });
 

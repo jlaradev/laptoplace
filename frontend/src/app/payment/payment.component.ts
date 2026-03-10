@@ -1,6 +1,6 @@
 // ...existing imports...
 import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { forkJoin, firstValueFrom } from 'rxjs';
 import { PaymentService, PaymentResponseDTO } from './payment.service';
 import { OrderService } from '../services/order.service';
 import { UserService, User } from '../services/user.service';
@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 import { AuthService } from '../services/auth.service';
+import { CartService } from '../services/cart.service';
 
 declare var Stripe: any;
 const STRIPE_PUBLISHABLE_KEY = (window as any).APP_CONFIG?.stripePublishableKey;
@@ -29,7 +30,7 @@ export class PaymentComponent implements OnInit {
   onStripeElementChange(event: any) {
     this.paymentMethodSelected = !!event.complete;
     if (event.complete && event.value && event.value.type) {
-      console.log('[Stripe] Método de pago seleccionado:', event.value.type, event.value);
+      // console.log('[Stripe] Método de pago seleccionado:', event.value.type, event.value);
     }
     this.cdr.detectChanges();
   }
@@ -63,6 +64,7 @@ export class PaymentComponent implements OnInit {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private authService: AuthService,
+    private cartService: CartService,
   ) {}
 
   ngOnInit(): void {
@@ -146,7 +148,7 @@ export class PaymentComponent implements OnInit {
   }
 
   setupPaymentElement() {
-    console.log('[StripeElement] setupPaymentElement start', { clientSecret: this.clientSecret });
+    // console.log('[StripeElement] setupPaymentElement start', { clientSecret: this.clientSecret });
 
     if (!this.clientSecret) {
       this.error = 'No se pudo obtener clientSecret para Stripe.';
@@ -168,7 +170,7 @@ export class PaymentComponent implements OnInit {
     }
 
     try {
-      console.log('[StripeElement] Inicializando Stripe con publishableKey:', STRIPE_PUBLISHABLE_KEY);
+      // console.log('[StripeElement] Inicializando Stripe con publishableKey:', STRIPE_PUBLISHABLE_KEY);
       this.stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
       this.elements = this.stripe.elements({ clientSecret: this.clientSecret });
       formDiv.innerHTML = '';
@@ -178,7 +180,7 @@ export class PaymentComponent implements OnInit {
       this.paymentElement.on('change', (event: any) => this.onStripeElementChange(event));
       this.paymentMethodSelected = false;
       this.loading = false;
-      console.log('[StripeElement] Payment Element montado correctamente en #payment-form');
+      // console.log('[StripeElement] Payment Element montado correctamente en #payment-form');
     } catch (e) {
       console.error('[StripeElement] Error Stripe Elements:', e);
       this.error = 'Error inicializando Stripe Elements';
@@ -227,7 +229,7 @@ export class PaymentComponent implements OnInit {
   }
 
   async confirmarPago() {
-    console.log('[Payment] confirmarPago invoked');
+    // console.log('[Payment] confirmarPago invoked');
     if (!this.stripe || !this.clientSecret) {
       console.error('[Payment] cannot confirm - stripe o clientSecret faltante', {
         stripe: !!this.stripe,
@@ -249,8 +251,12 @@ export class PaymentComponent implements OnInit {
         },
         redirect: 'if_required'
       });
-      console.log('[Payment] confirmPayment result', result);
-      this.loading = false;
+      // console.log('[Payment] confirmPayment result', result);
+      // Evitar ExpressionChangedAfterItHasBeenCheckedError al cambiar bindings
+      setTimeout(() => {
+        this.loading = false;
+        try { this.cdr.detectChanges(); } catch {}
+      }, 0);
       if (result.error) {
         setTimeout(() => {
           this.mostrarOverlayError = true;
@@ -260,11 +266,36 @@ export class PaymentComponent implements OnInit {
           }, 5000);
         }, 3000);
       } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+        // Borrar items individualmente (no usar clearCart)
+        try {
+          // console.log('[Payment] Borrando items individualmente tras pago exitoso...');
+          const latestCart: any = await firstValueFrom(this.cartService.getCart());
+          const items = latestCart?.items || [];
+          if (items.length > 0) {
+            // console.log('[Payment] Items a eliminar:', items.map((it: any) => it.id));
+            const removals = items.map((it: any) => this.cartService.removeFromCart(it.id));
+            await firstValueFrom(forkJoin(removals));
+            // console.log('[Payment] Eliminación item-por-item completada');
+          } else {
+            // console.log('[Payment] No hay items en el carrito al confirmar pago');
+          }
+        } catch (e) {
+          console.warn('[Payment] Error eliminando items individualmente', e);
+        }
         setTimeout(() => {
           this.mostrarOverlayAprobada = true;
           this.cdr.detectChanges();
           setTimeout(() => {
-            this.router.navigate(['/cart']);
+            // Notificar el refresh del carrito justo antes de navegar (evita cambios durante CD)
+            // Navegar primero; luego notificar al carrito para evitar ExpressionChangedAfterItHasBeenCheckedError
+            this.router.navigate(['/cart']).then(() => {
+              try {
+                this.cartService.notifyCartChanged();
+                // console.log('[Payment] Notificado refresh del carrito a otros componentes (post-navigate)');
+              } catch (e) {
+                console.warn('[Payment] Error notificando refresh del carrito (post-navigate)', e);
+              }
+            });
           }, 2500);
         }, 300);
       } else {
@@ -278,10 +309,10 @@ export class PaymentComponent implements OnInit {
       }
     } catch (e: any) {
       console.error('[Payment] confirmarPago exception', e);
-      this.loading = false;
       setTimeout(() => {
+        this.loading = false;
         this.mostrarOverlayError = true;
-        this.cdr.detectChanges();
+        try { this.cdr.detectChanges(); } catch {}
         setTimeout(() => {
           this.router.navigate(['/cart']);
         }, 5000);

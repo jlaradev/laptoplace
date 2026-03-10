@@ -215,11 +215,9 @@ export class ProductDetailComponent implements OnInit {
     this.isLoggedIn = this.authService.isLoggedInSync();
     const idParam = this.route.snapshot.paramMap.get('id');
     const id = idParam !== null ? Number(idParam) : null;
-    console.log('ID recibido:', id);
     if (id !== null && !isNaN(id)) {
       this.productDetailService.getProductDetail(id).subscribe({
         next: (data) => {
-          console.log('Producto recibido:', data);
           this.product = data;
           this.quantity.set(1);
           // Verificar si el usuario ha comprado este producto y si ya tiene reseña
@@ -257,14 +255,12 @@ export class ProductDetailComponent implements OnInit {
           });
         },
         error: (err) => {
-          console.error('Error al cargar producto:', err);
           this.product = null;
           this.loading = false;
           this.cdr.detectChanges();
         }
       });
     } else {
-      console.warn('ID no válido para detalle de producto');
       this.loading = false;
       this.cdr.detectChanges();
     }

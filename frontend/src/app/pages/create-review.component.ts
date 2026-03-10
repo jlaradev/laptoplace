@@ -151,7 +151,6 @@ export class CreateReviewComponent implements OnInit {
             this.cdr.markForCheck();
           },
           error: (err) => {
-            console.error('Error loading existing review:', err);
             this.error = 'No se pudo cargar tu reseña anterior';
             this.cdr.markForCheck();
           }
@@ -176,8 +175,6 @@ export class CreateReviewComponent implements OnInit {
 
     const token = localStorage.getItem('token');
     const userId = localStorage.getItem('userId');
-    console.log('Token:', token ? 'EXISTS' : 'MISSING');
-    console.log('UserId:', userId);
 
     const dto = {
       productId: this.productId,
@@ -192,7 +189,6 @@ export class CreateReviewComponent implements OnInit {
           this.router.navigate(['/product', this.productId]);
         },
         error: (err) => {
-          console.error('Error updating review:', err);
           this.error = err.error?.message || 'Error al actualizar la reseña';
           this.loading = false;
           this.cdr.markForCheck();
@@ -205,7 +201,6 @@ export class CreateReviewComponent implements OnInit {
           this.router.navigate(['/product', this.productId]);
         },
         error: (err) => {
-          console.error('Error creating review:', err);
           this.error = err.error?.message || 'Error al publicar la reseña';
           this.loading = false;
           this.cdr.markForCheck();

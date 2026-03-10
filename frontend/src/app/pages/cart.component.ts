@@ -244,7 +244,6 @@ export class CartPageComponent implements OnInit {
         this.calculateTotal(true);
       },
       error: (err) => {
-        console.error('Error al actualizar la cantidad:', err);
         item.updating = false;
         this.lastRequestedQty.delete(item.id);
         // fallback: reload cart to get authoritative state
@@ -279,7 +278,6 @@ export class CartPageComponent implements OnInit {
         this.calculateTotal(true);
       },
       error: (err) => {
-        console.error('Error eliminando item del carrito:', err);
         item.deleting = false;
         alert('No se pudo eliminar el item. Intenta nuevamente.');
       }

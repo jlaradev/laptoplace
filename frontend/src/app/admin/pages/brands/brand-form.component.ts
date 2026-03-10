@@ -281,7 +281,6 @@ export class BrandFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSaving.set(false);
-          console.error('Brand update error', err);
           if (err.status === 403) {
             this.error.set('❌ No tienes permisos para actualizar marcas (se requiere rol ADMIN)');
           } else {
@@ -306,7 +305,6 @@ export class BrandFormComponent implements OnInit {
               error: (err) => {
                 this.isUploadingImage.set(false);
                 this.isSaving.set(false);
-                console.error('Image upload error', err);
                 if (err.status === 403) {
                   this.error.set('❌ No tienes permisos para subir imágenes de marca');
                 } else {
@@ -323,7 +321,6 @@ export class BrandFormComponent implements OnInit {
         },
         error: (err) => {
           this.isSaving.set(false);
-          console.error('Brand create error', err);
           if (err.status === 403) {
             this.error.set('❌ No tienes permisos para crear marcas (se requiere rol ADMIN)');
           } else {

@@ -33,7 +33,6 @@ export class PaymentService {
   constructor(private http: HttpClient) {}
 
   createPayment(dto: CreatePaymentDTO): Observable<PaymentResponseDTO> {
-    console.log('[PaymentService] POST', `${this.apiUrl}/create`, dto);
     return this.http.post<PaymentResponseDTO>(`${this.apiUrl}/create`, dto);
   }
 

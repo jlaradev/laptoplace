@@ -104,7 +104,6 @@ export class OrdersComponent implements OnInit {
   ngOnInit() {
     this.userId = localStorage.getItem('userId');
     if (!this.userId) {
-      console.error('No user ID found');
       return;
     }
     this.loadOrders(true);
@@ -133,7 +132,6 @@ export class OrdersComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        console.error('Error loading orders:', err);
         this.loading.set(false);
       }
     });

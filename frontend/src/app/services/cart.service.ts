@@ -65,8 +65,12 @@ export class CartService {
 
   clearCart(): Observable<any> {
     const userId = this.getUserId();
+    const token = localStorage.getItem('token');
     if (!userId) throw new Error('No userId found in localStorage');
-    return this.http.delete(`${this.apiUrl}/user/${userId}/clear`).pipe(
+    if (!token) throw new Error('No token found in localStorage');
+    return this.http.delete(`${this.apiUrl}/user/${userId}/clear`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }).pipe(
       tap(() => this.cartChanged.next({ type: 'refresh' }))
     );
   }
@@ -81,20 +85,16 @@ export class CartService {
   }
 
   updateItemQuantity(itemId: number, cantidad: number): Observable<any> {
-    console.log('[CartService] Actualizando cantidad:', { itemId, cantidad });
     if (cantidad <= 0) {
-      console.log('[CartService] Cantidad <= 0, eliminando item:', itemId);
       return this.removeFromCart(itemId);
     }
     return this.http.put(`${this.apiUrl}/items/${itemId}`, { cantidad }).pipe(
       tap(() => {
-        console.log('[CartService] Cantidad actualizada con éxito:', { itemId, cantidad });
         // server confirmed -> clear pending and notify
         this.pendingUpdates.delete(itemId);
         this.cartChanged.next({ type: 'item-updated', payload: { id: itemId, cantidad } });
       }),
       catchError((error) => {
-        console.error('[CartService] Error al actualizar cantidad:', error);
         // clear pending and request full refresh so UI syncs with server
         this.pendingUpdates.delete(itemId);
         this.cartChanged.next({ type: 'refresh' });
