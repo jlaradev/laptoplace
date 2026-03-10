@@ -23,7 +23,8 @@ export class AuthService {
         return this.http.post<any>('https://laptophub-cigv.onrender.com/api/users/register', data);
       }
     resetPassword(token: string, password: string): Observable<any> {
-      return this.http.post<any>(`${this.apiBaseUrl}/reset-password`, { token, password });
+      // Backend expects { token, newPassword }
+      return this.http.post<any>(`${this.apiBaseUrl}/reset-password`, { token, newPassword: password });
     }
   private apiBaseUrl = 'https://laptophub-cigv.onrender.com/api/auth';
   private isLoggedIn$ = new BehaviorSubject<boolean>(this.hasToken());
