@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductDetailService, ProductDetail } from '../services/product-detail.service';
+import { ProductService } from '../services/product.service';
 import { HeaderComponent } from '../components/header.component';
 import { FooterComponent } from '../components/footer.component';
 import { Subscription } from 'rxjs';
@@ -133,6 +134,7 @@ import { Subscription } from 'rxjs';
 })
 export class CompareComponent {
   private productDetailService = inject(ProductDetailService);
+  private productService = inject(ProductService);
   search1 = '';
   search2 = '';
   results1 = signal<ProductDetail[]>([]);
@@ -154,14 +156,18 @@ export class CompareComponent {
     // Cancelar búsqueda anterior si existe
     if (n === 1 && this.searchSub1) { this.searchSub1.unsubscribe(); }
     if (n === 2 && this.searchSub2) { this.searchSub2.unsubscribe(); }
-    const sub = this.productDetailService['http'].get<any>(`${this.productDetailService['apiUrl']}/search?nombre=${term}`)
-      .subscribe((res: any) => {
-        const ids = res.content.map((p: any) => p.id);
+    const sub = this.productService.search({ nombre: term, page: 0, size: 20 })
+      .subscribe((page: any) => {
+        const ids = (page.content || []).map((p: any) => p.id);
         const detailCalls = ids.map((id: number) => this.productDetailService.getProductDetail(id));
         Promise.all(detailCalls.map((obs: any) => obs.toPromise())).then((details: ProductDetail[]) => {
           if (n === 1) this.results1.set(details);
           else this.results2.set(details);
         });
+      }, (err: any) => {
+        console.error('[Compare] search error', err);
+        if (n === 1) this.results1.set([]);
+        else this.results2.set([]);
       });
     if (n === 1) this.searchSub1 = sub;
     else this.searchSub2 = sub;
