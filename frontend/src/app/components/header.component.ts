@@ -12,13 +12,13 @@ import { UserService, User } from '../services/user.service';
   imports: [CommonModule, RouterLink],
   template: `
     <header class="border-b border-slate-200 sticky top-0 bg-white z-40">
-      <div class="max-w-[1440px] mx-auto px-4 md:px-6 py-5 flex items-center justify-between">
-        <a href="/" class="flex items-center text-xl font-bold text-slate-900">Lapto<span class="text-blue-600">Place</span></a>
+      <div class="w-full max-w-[1440px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4 min-w-0">
+        <a href="/" class="flex-shrink-0 flex items-center text-xl font-bold text-slate-900">Lapto<span class="text-blue-600">Place</span></a>
         <nav class="hidden md:flex gap-8 text-sm font-semibold text-slate-700">
           <a routerLink="/catalog" class="hover:text-blue-600 transition">Catalogo</a>
           <a routerLink="/compare" class="hover:text-blue-600 transition">Comparar equipos</a>
         </nav>
-        <div class="flex gap-3 items-center">
+        <div class="flex gap-3 items-center min-w-0">
           <ng-container *ngIf="isLoggedIn && !isOnCartPage">
             <div class="relative mr-2">
               <button (click)="toggleCartDropdown()" class="relative px-3 py-2 rounded-full bg-blue-50 hover:bg-blue-100 transition flex items-center">
@@ -57,7 +57,7 @@ import { UserService, User } from '../services/user.service';
             </div>
           </ng-container>
           <!-- Desktop: saludo completo. Mobile: saludo compacto (primer nombre) -->
-          <span *ngIf="isLoggedIn && userName" class="hidden sm:inline-block text-blue-700 font-bold text-base mr-2">BIENVENIDO {{ userName }}</span>
+          <span *ngIf="isLoggedIn && userName" class="hidden sm:inline-block text-blue-700 font-bold text-base mr-2 max-w-[160px] overflow-hidden truncate">BIENVENIDO {{ userName }}</span>
           <span *ngIf="isLoggedIn && userName" class="sm:hidden text-blue-700 font-semibold text-sm mr-2 max-w-[110px] overflow-hidden truncate">Hola {{ getFirstName() }}</span>
           <button *ngIf="!isLoggedIn" (click)="goToLogin()" class="px-5 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 transition cursor-pointer">
             Iniciar sesion

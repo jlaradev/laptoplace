@@ -8,12 +8,13 @@ import { AuthService } from './services/auth.service';
 import { Product } from './models/product.model';
 import { Brand } from './models/brand.model';
 import { HeaderComponent } from './components/header.component';
+import { FooterComponent } from './components/footer.component';
 import { ProductCardComponent } from './components/product-card.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterLink, HeaderComponent, ProductCardComponent],
+  imports: [CommonModule, RouterLink, HeaderComponent, ProductCardComponent, FooterComponent],
   templateUrl: './app.html'
 })
 export class App implements OnInit {

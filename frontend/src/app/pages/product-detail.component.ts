@@ -29,7 +29,7 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
         </div>
       </div>
 
-      <main class="flex-1 container mx-auto px-4 py-8">
+      <main class="flex-1 container mx-auto px-4 py-8 text-sm md:text-base">
         <ng-container *ngIf="loading; else loaded">
           <div class="flex flex-col items-center justify-center min-h-40">
             <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -38,17 +38,17 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
         </ng-container>
         <ng-template #loaded>
           <ng-container *ngIf="product; else notfound">
-            <div class="bg-white rounded-lg shadow p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white rounded-lg shadow p-6 grid grid-cols-1 md:grid-cols-2 gap-8 product-grid">
               <!-- Galería de imágenes -->
               <div>
                 <ng-container *ngIf="imagenesOrdenadas && imagenesOrdenadas.length; else noImage">
-                  <div class="relative flex flex-col items-center">
-                    <!-- Contenedor con tamaño fijo para evitar layout shift -->
-                    <div class="w-[30rem] h-[30rem] bg-gray-50 rounded border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden">
+                  <div class="relative flex flex-col items-center w-full">
+                    <!-- Contenedor responsive para evitar recorte en móviles -->
+                    <div class="img-container w-full sm:w-[30rem] sm:h-[30rem] max-h-[60vh] bg-gray-50 rounded border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden">
                       <img
                         [src]="imagenesOrdenadas[currentImageIndex].url"
                         alt="Imagen del producto"
-                        class="w-full h-full object-contain"
+                        class="w-full h-auto object-contain"
                       >
                     </div>
                     <!-- Descripción de la imagen -->
@@ -139,18 +139,18 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
               </div>
             </div>
             <!-- Reseñas -->
-            <div class="mt-10 bg-white rounded-lg shadow p-6">
-              <div class="flex justify-between items-center mb-4 h-10">
+              <div class="mt-10 bg-white rounded-lg shadow p-6">
+              <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                 <h3 class="text-xl font-bold text-blue-800">Reseñas de usuarios</h3>
-                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center">
-                  <div *ngIf="userHasPurchased()" class="text-sm text-gray-700 font-medium mb-2 sm:mb-0 order-1 sm:order-1 w-full sm:w-auto">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center mt-3 md:mt-0 w-full md:w-auto">
+                  <div *ngIf="userHasPurchased()" class="text-sm text-gray-700 font-medium w-full sm:w-auto order-2 sm:order-1">
                     <span *ngIf="!userHasReview()">Ya has comprado este producto</span>
                     <span *ngIf="userHasReview()">Ya has opinado sobre este producto</span>
                   </div>
                   <button 
                     *ngIf="userHasPurchased()"
                     (click)="router.navigate(['/product', product.id, 'review'], { queryParams: { reviewId: existingReviewId() || undefined } })"
-                    class="px-6 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 transition whitespace-nowrap h-10 order-2 sm:order-2 w-full sm:w-auto">
+                    class="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 transition whitespace-nowrap h-10 w-full sm:w-auto order-1 sm:order-2">
                     <span *ngIf="!userHasReview()">Opinar sobre este producto</span>
                     <span *ngIf="userHasReview()">Actualizar mi reseña</span>
                   </button>
@@ -183,7 +183,13 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
       <app-footer></app-footer>
     </div>
   `,
-  styles: []
+  styles: [
+    `@media (orientation: landscape) and (max-width: 1024px) {
+      .product-grid { grid-template-columns: 1fr !important; }
+      .product-grid .img-container { width: 100% !important; height: auto !important; max-height: 65vh !important; display:flex; align-items:center; justify-content:center; }
+      .product-grid .img-container img { width: auto !important; max-width: 100% !important; max-height: 65vh !important; object-fit: contain !important; }
+    }`
+  ]
 })
 export class ProductDetailComponent implements OnInit {
   private cartService = inject(CartService);

@@ -50,7 +50,7 @@ import { Subscription } from 'rxjs';
       <div *ngIf="showComparison()" class="w-full max-w-6xl mt-10">
         <h2 class="text-2xl font-bold mb-6 text-blue-800 text-center">Comparación de especificaciones</h2>
         <div class="flex justify-center">
-          <table class="w-full mx-auto text-lg">
+          <table class="w-full mx-0 md:mx-auto text-xs md:text-lg compare-table">
             <colgroup>
               <col style="width: 20%;">
               <col style="width: 10%;">
@@ -63,8 +63,8 @@ import { Subscription } from 'rxjs';
               <tr class="h-20">
                 <td></td>
                 <td></td>
-                <td class="text-center font-bold text-blue-700 text-xl">{{ selected1()?.nombre || '---' }}</td>
-                <td class="text-center font-bold text-blue-700 text-xl">{{ selected2()?.nombre || '---' }}</td>
+                <td class="text-center font-bold text-blue-700 text-sm md:text-xl">{{ selected1()?.nombre || '---' }}</td>
+                <td class="text-center font-bold text-blue-700 text-sm md:text-xl">{{ selected2()?.nombre || '---' }}</td>
                 <td></td>
                 <td></td>
               </tr>
@@ -130,7 +130,16 @@ import { Subscription } from 'rxjs';
       </div>
     </main>
     <app-footer></app-footer>
-  `
+  `,
+  styles: [
+    `@media (max-width: 639px) {
+      .compare-table td, .compare-table th {
+        padding: 0.5rem 0.4rem !important;
+      }
+      .compare-table { margin-left: 0 !important; margin-right: 0 !important; }
+      .compare-table td { font-size: 0.75rem; }
+    }`
+  ]
 })
 export class CompareComponent {
   private productDetailService = inject(ProductDetailService);

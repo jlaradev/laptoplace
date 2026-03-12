@@ -4,3 +4,8 @@
 body {
   font-family: "Plus Jakarta Sans", "Segoe UI", "Helvetica Neue", sans-serif;
 }
+
+/* Prevent horizontal page scrolling on small screens caused by wide elements */
+html, body {
+  overflow-x: hidden;
+}
