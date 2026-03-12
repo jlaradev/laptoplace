@@ -31,7 +31,7 @@ import { FormsModule } from '@angular/forms';
           <div [class.opacity-60]="loading">
             <div *ngIf="!loading && items.length === 0" class="text-center text-slate-500 py-12">Tu carrito está vacío.</div>
             <div *ngIf="items.length > 0" class="space-y-4">
-              <div *ngFor="let item of items" class="flex items-center gap-4 p-4 border rounded">
+              <div *ngFor="let item of items" class="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded">
                 <div class="w-16 h-16 flex-shrink-0 rounded overflow-hidden border bg-slate-50 flex items-center justify-center">
                   <img *ngIf="item.product?.imagenPrincipal?.url; else noImg"
                        [src]="item.product.imagenPrincipal.url"
@@ -43,7 +43,7 @@ import { FormsModule } from '@angular/forms';
                 <div class="flex-1">
                   <div class="font-semibold">{{ item.product?.nombre }}</div>
                   <div class="text-sm text-slate-600">Valor unitario: {{ item.product?.precio | currency:'USD':'symbol':'1.2-2' }}</div>
-                  <div class="flex items-center gap-2 mt-2">
+                  <div class="flex items-center gap-2 mt-2 flex-wrap">
                     <label for="cantidad-{{item.id}}" class="text-sm text-slate-600">Cantidad:</label>
                     <input
                       id="cantidad-{{item.id}}"
@@ -57,12 +57,12 @@ import { FormsModule } from '@angular/forms';
                     <span class="text-xs text-slate-500">Unidades disponibles: {{ item.product?.stock ?? item.stock ?? '—' }}</span>
                   </div>
                 </div>
-                  <div class="flex items-center gap-4">
-                  <div class="font-bold text-blue-700">$ {{ (item.product?.precio * item.cantidad) | number:'1.2-2' }}</div>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 ml-auto">
+                  <div class="font-bold text-blue-700 whitespace-nowrap">$ {{ (item.product?.precio * item.cantidad) | number:'1.2-2' }}</div>
                   <button
                     type="button"
                     [ngClass]="item.deleting ? 'cursor-not-allowed' : 'hover:bg-red-100'"
-                    class="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded flex items-center gap-2"
+                    class="px-3 py-1 bg-red-50 text-red-700 border border-red-100 rounded flex items-center gap-2 text-sm"
                     (click)="removeItem(item.id)"
                     [disabled]="item.deleting"
                   >
@@ -72,10 +72,10 @@ import { FormsModule } from '@angular/forms';
               </div>
               <div class="text-right font-semibold mt-4">Total: $ {{ total }}</div>
             </div>
-              <div class="text-right mt-6">
+              <div *ngIf="items.length > 0" class="text-right mt-6">
                 <button
                   class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition"
-                  [disabled]="loading || items.length === 0"
+                  [disabled]="loading"
                   (click)="goToPayment()"
                 >
                   Pagar

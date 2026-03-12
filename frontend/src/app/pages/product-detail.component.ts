@@ -142,15 +142,15 @@ import { RoundDecimalPipe } from '../pipes/round-decimal.pipe';
             <div class="mt-10 bg-white rounded-lg shadow p-6">
               <div class="flex justify-between items-center mb-4 h-10">
                 <h3 class="text-xl font-bold text-blue-800">Reseñas de usuarios</h3>
-                <div class="flex gap-4 items-center">
-                  <div *ngIf="userHasPurchased()" class="text-sm text-gray-700 font-medium">
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center">
+                  <div *ngIf="userHasPurchased()" class="text-sm text-gray-700 font-medium mb-2 sm:mb-0 order-1 sm:order-1 w-full sm:w-auto">
                     <span *ngIf="!userHasReview()">Ya has comprado este producto</span>
                     <span *ngIf="userHasReview()">Ya has opinado sobre este producto</span>
                   </div>
                   <button 
                     *ngIf="userHasPurchased()"
                     (click)="router.navigate(['/product', product.id, 'review'], { queryParams: { reviewId: existingReviewId() || undefined } })"
-                    class="px-6 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 transition whitespace-nowrap h-10">
+                    class="px-6 py-2 bg-blue-600 text-white rounded font-semibold hover:bg-blue-700 transition whitespace-nowrap h-10 order-2 sm:order-2 w-full sm:w-auto">
                     <span *ngIf="!userHasReview()">Opinar sobre este producto</span>
                     <span *ngIf="userHasReview()">Actualizar mi reseña</span>
                   </button>

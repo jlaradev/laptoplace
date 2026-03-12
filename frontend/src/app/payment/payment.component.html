@@ -1,110 +1,179 @@
-<!-- Toast flotante (debajo del header, sin taparlo) -->
+<!-- Toast flotante -->
 <div class="fixed right-6 z-50 top-20 pointer-events-none">
   <div *ngIf="toastVisible" class="min-w-[200px] max-w-sm bg-red-600 text-white px-4 py-3 rounded shadow-lg transition-opacity duration-300">
     {{ toastMsg }}
   </div>
 </div>
+
 <app-header></app-header>
-<div class="payment-bg">
-  <div *ngIf="mostrarOverlayError" class="payment-overlay-error">
-    <div class="payment-overlay-content">
-      <span class="payment-overlay-icon">&#9888;</span>
-      <h2 *ngIf="error && error.toLowerCase().includes('unidades disponibles')">Ya no hay suficientes unidades disponibles</h2>
-      <h2 *ngIf="!error || !error.toLowerCase().includes('unidades disponibles')">Transacción rechazada</h2>
-      <p>Serás redirigido al carrito...</p>
+
+<!-- Fondo -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 flex flex-col items-center justify-start">
+
+  <!-- Overlay error -->
+  <div *ngIf="mostrarOverlayError" class="payment-overlay-error fixed inset-0 bg-slate-800/85 z-[9999] flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl px-10 py-12 text-center min-w-[280px] max-w-[90vw]">
+      <span class="block text-5xl text-red-500 mb-4">&#9888;</span>
+      <h2 class="text-2xl font-extrabold text-red-600 mb-2" *ngIf="error && error.toLowerCase().includes('unidades disponibles')">Ya no hay suficientes unidades disponibles</h2>
+      <h2 class="text-2xl font-extrabold text-red-600 mb-2" *ngIf="!error || !error.toLowerCase().includes('unidades disponibles')">Transacción rechazada</h2>
+      <p class="text-slate-500 text-lg">Serás redirigido al carrito...</p>
     </div>
   </div>
-  <div *ngIf="mostrarOverlayAprobada" class="payment-overlay-success">
-    <div class="payment-overlay-content">
-      <span class="payment-overlay-icon">&#10004;</span>
-      <h2>Transacción aprobada</h2>
-      <p>Serás redirigido al carrito...</p>
+
+  <!-- Overlay éxito -->
+  <div *ngIf="mostrarOverlayAprobada" class="payment-overlay-success fixed inset-0 bg-slate-800/85 z-[9999] flex items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl px-10 py-12 text-center min-w-[280px] max-w-[90vw]">
+      <span class="block text-5xl text-green-500 mb-4">&#10004;</span>
+      <h2 class="text-2xl font-extrabold text-green-500 mb-2">Transacción aprobada</h2>
+      <p class="text-slate-500 text-lg">Serás redirigido al carrito...</p>
     </div>
   </div>
-  <div class="payment-flex-container" [class.blur-sm]="mostrarOverlayError">
-    <div class="payment-flex-card">
-      <div class="payment-flex-left-right">
-        <div class="payment-flex-left">
-          <div *ngIf="error && (!mostrarOverlayError || !error.toLowerCase().includes('unidades disponibles'))" class="payment-error">{{ error }}</div>
+
+  <!-- Contenedor principal — padding-bottom en móvil para que el sticky no tape contenido -->
+  <div class="w-full max-w-5xl mx-auto px-4 py-10 pb-28 md:pb-10" [class.blur-sm]="mostrarOverlayError">
+    <div class="bg-white rounded-xl shadow-md p-6">
+
+      <!-- Layout: columna en móvil, fila en desktop -->
+      <div class="flex flex-col-reverse gap-6 md:flex-row md:gap-8 md:items-start">
+
+        <!-- IZQUIERDA: dirección + stripe -->
+        <div class="flex-1 min-w-0 flex flex-col gap-4">
+
+          <div *ngIf="error && (!mostrarOverlayError || !error.toLowerCase().includes('unidades disponibles'))"
+               class="text-red-600 font-medium">{{ error }}</div>
+
           <!-- Dirección de entrega -->
-          <div *ngIf="userLoaded && !direccionConfirmada">
-            <label class="block font-semibold mb-2">Dirección de entrega</label>
-            
-            <!-- Si NO hay dirección: campo de entrada obligatorio -->
-            <div *ngIf="!direccionUsuario()">
-              <input 
-                class="border rounded px-3 py-2 w-full mb-2" 
+          <div *ngIf="userLoaded && !direccionConfirmada" class="flex flex-col gap-3">
+            <label class="font-semibold">Dirección de entrega</label>
+
+            <div *ngIf="!direccionUsuario()" class="flex flex-col gap-2">
+              <input
+                class="border rounded px-3 py-2 w-full"
                 [ngModel]="direccionEnvio()" (ngModelChange)="direccionEnvio.set($event)"
                 placeholder="Ingresa tu dirección de entrega"
                 name="nuevaDireccion"
               />
-              <button 
-                class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" 
-                (click)="iniciarPago()" 
+              <button
+                class="w-full py-2.5 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50"
+                (click)="iniciarPago()"
                 [disabled]="!direccionEnvio() || loading"
               >
                 {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
               </button>
             </div>
-            
-            <!-- Si YA hay dirección: mostrar y permitir cambiarla -->
-            <div *ngIf="direccionUsuario()">
-              <div *ngIf="!mostrarFormularioDireccion">
-                <div class="mb-2">{{ direccionEnvio() }}</div>
-                <button class="px-4 py-1 payment-btn-gray mr-2" (click)="usarOtraDireccion()">Usar otra dirección</button>
-                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition mt-2 payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio() || loading">
-                  {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
-                </button>
+
+            <div *ngIf="direccionUsuario()" class="flex flex-col gap-2">
+              <div *ngIf="!mostrarFormularioDireccion" class="flex flex-col gap-2">
+                <p class="text-slate-700">{{ direccionEnvio() }}</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <button
+                    class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition"
+                    (click)="usarOtraDireccion()">
+                    Usar otra dirección
+                  </button>
+                  <button
+                    class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50"
+                    (click)="iniciarPago()"
+                    [disabled]="!direccionEnvio() || loading">
+                    {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
+                  </button>
+                </div>
               </div>
-              <div *ngIf="mostrarFormularioDireccion">
-                <input class="border rounded px-3 py-2 w-full mb-2" [ngModel]="direccionEnvio()" (ngModelChange)="direccionEnvio.set($event)" placeholder="Ingresa nueva dirección" name="otraDireccion" />
-                <button class="px-4 py-1 payment-btn-gray mr-2" (click)="cancelarOtraDireccion()">Cancelar</button>
-                <button class="px-6 py-2 bg-blue-600 text-white rounded font-semibold shadow hover:bg-blue-700 transition payment-confirm-btn" (click)="iniciarPago()" [disabled]="!direccionEnvio() || loading">
-                  {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
-                </button>
+
+              <div *ngIf="mostrarFormularioDireccion" class="flex flex-col gap-2">
+                <input
+                  class="border rounded px-3 py-2 w-full"
+                  [ngModel]="direccionEnvio()" (ngModelChange)="direccionEnvio.set($event)"
+                  placeholder="Ingresa nueva dirección"
+                  name="otraDireccion"
+                />
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <button
+                    class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition"
+                    (click)="cancelarOtraDireccion()">
+                    Cancelar
+                  </button>
+                  <button
+                    class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition disabled:opacity-50"
+                    (click)="iniciarPago()"
+                    [disabled]="!direccionEnvio() || loading">
+                    {{ loading ? 'Procesando...' : 'Confirmar dirección de entrega' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-          <!-- Stripe Elements: siempre presente, pero oculto si no está confirmada la dirección -->
+
+          <!-- Stripe Elements -->
           <div #paymentForm id="payment-form" [style.display]="direccionConfirmada ? 'block' : 'none'"></div>
+
         </div>
-        <div class="payment-flex-right" *ngIf="items.length > 0">
-          <h2 class="payment-summary-title">Resumen del pedido</h2>
-          <ul>
-            <li *ngFor="let item of items">
-              <img *ngIf="item.imagenUrl" [src]="item.imagenUrl" width="40" height="40"
-                style="vertical-align:middle;margin-right:8px;" />
-              {{ item.nombre }} x {{ item.cantidad }} — ${{ item.precio }}
+
+        <!-- DERECHA: resumen del pedido -->
+        <div *ngIf="items.length > 0" class="w-full md:w-72 lg:w-80 shrink-0 flex flex-col gap-3 bg-slate-50 rounded-xl p-4 md:p-5">
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight">Resumen del pedido</h2>
+
+          <ul class="flex flex-col gap-2">
+            <li *ngFor="let item of items" class="flex items-center gap-2 text-sm text-slate-700">
+              <img *ngIf="item.imagenUrl" [src]="item.imagenUrl" width="40" height="40" class="rounded object-cover shrink-0" />
+              <span>{{ item.nombre }} x {{ item.cantidad }} — ${{ item.precio }}</span>
             </li>
           </ul>
-          <div class="font-bold mt-2">Total: ${{ total }}</div>
+
+          <div class="font-bold text-slate-800 border-t pt-2">Total: ${{ total }}</div>
+
+          <!-- Botón confirmar pago: SOLO visible en desktop (md:block) -->
           <button
-            class="px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition mt-6 w-full payment-confirm-btn"
+            *ngIf="clientSecret && items.length > 0 && direccionConfirmada"
+            class="hidden md:block w-full py-2.5 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition disabled:opacity-50"
             [disabled]="loading"
             (click)="confirmarPago()"
-            *ngIf="clientSecret && items.length > 0 && direccionConfirmada"
           >
             {{ loading ? 'Procesando pago...' : 'Confirmar pago' }}
           </button>
-          <!-- Botón secundario: mismo lugar, misma anchura -->
+
+          <!-- Volver al carrito -->
           <button
             *ngIf="!direccionConfirmada"
-            class="px-6 py-2 bg-gray-200 text-gray-700 rounded font-semibold shadow hover:bg-gray-300 transition mt-3 w-full"
+            class="w-full py-2.5 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition"
             (click)="volverAlCarrito()"
           >
             Volver al carrito
           </button>
+
+          <!-- Cancelar pedido -->
           <button
             *ngIf="direccionConfirmada"
-            class="px-6 py-2 bg-red-100 text-red-700 rounded font-semibold shadow hover:bg-red-200 transition mt-3 w-full"
+            class="w-full py-2.5 bg-red-50 text-red-700 rounded-lg font-semibold hover:bg-red-100 transition disabled:opacity-50"
             [disabled]="loading || cancelando"
             (click)="cancelarPedido()"
           >
             {{ cancelando ? 'Cancelando...' : 'Cancelar pedido' }}
           </button>
         </div>
+
       </div>
     </div>
   </div>
+
+  <!-- STICKY BOTTOM BAR — solo móvil, solo cuando Stripe está listo -->
+  <div
+    *ngIf="clientSecret && items.length > 0 && direccionConfirmada"
+    class="payment-sticky-bar md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-4 py-3 flex items-center gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
+  >
+    <div class="flex-1 min-w-0">
+      <p class="text-xs text-slate-500 leading-none mb-0.5">Total</p>
+      <p class="font-extrabold text-slate-800 text-base leading-none">${{ total }}</p>
+    </div>
+    <button
+      class="shrink-0 px-8 py-3 bg-green-600 text-white rounded-xl font-bold text-base shadow hover:bg-green-700 active:scale-95 transition disabled:opacity-50"
+      [disabled]="loading"
+      (click)="confirmarPago()"
+    >
+      {{ loading ? 'Procesando...' : 'Confirmar pago' }}
+    </button>
+  </div>
+
 </div>
+
 <app-footer></app-footer>

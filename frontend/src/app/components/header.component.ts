@@ -27,7 +27,7 @@ import { UserService, User } from '../services/user.service';
                 </svg>
                 <span *ngIf="(cartRawArrayLength() > 0)" class="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1.5">{{ cartRawArrayLength() }}</span>
               </button>
-              <div *ngIf="showCartDropdown()" class="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+              <div *ngIf="showCartDropdown()" class="sm:absolute fixed top-16 sm:top-auto right-2 left-2 sm:right-0 sm:left-auto mt-2 sm:mt-2 w-auto sm:w-80 max-w-[90vw] bg-white border border-slate-200 rounded-lg shadow-lg z-50">
                 <div *ngIf="getItems().length === 0" class="p-4">
                   <span class="text-slate-500">Tu carrito está vacío</span>
                 </div>
@@ -56,7 +56,9 @@ import { UserService, User } from '../services/user.service';
               </div>
             </div>
           </ng-container>
-          <span *ngIf="isLoggedIn && userName" class="text-blue-700 font-bold text-base mr-2">BIENVENIDO, {{ userName }}</span>
+          <!-- Desktop: saludo completo. Mobile: saludo compacto (primer nombre) -->
+          <span *ngIf="isLoggedIn && userName" class="hidden sm:inline-block text-blue-700 font-bold text-base mr-2">BIENVENIDO {{ userName }}</span>
+          <span *ngIf="isLoggedIn && userName" class="sm:hidden text-blue-700 font-semibold text-sm mr-2 max-w-[110px] overflow-hidden truncate">Hola {{ getFirstName() }}</span>
           <button *ngIf="!isLoggedIn" (click)="goToLogin()" class="px-5 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 transition cursor-pointer">
             Iniciar sesion
           </button>
@@ -170,6 +172,11 @@ export class HeaderComponent implements OnInit, OnDestroy {
         this.isOnCartPage = ev.urlAfterRedirects === '/cart' || ev.url === '/cart';
       }
     });
+  }
+
+  getFirstName(): string {
+    if (!this.userName) return '';
+    return this.userName.split(' ')[0];
   }
 
   ngOnDestroy(): void {

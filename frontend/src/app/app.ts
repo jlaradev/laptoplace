@@ -119,7 +119,10 @@ export class App implements OnInit {
     if (!this.brandCarousel?.nativeElement) return;
 
     const carousel = this.brandCarousel.nativeElement;
-    const itemWidth = (carousel.clientWidth * 0.235) + 24;
+    const firstItem = carousel.querySelector<HTMLElement>('a, div');
+    const gapValue = getComputedStyle(carousel).gap || getComputedStyle(carousel).columnGap || '0';
+    const gap = parseFloat(gapValue as string) || 0;
+    const itemWidth = firstItem ? firstItem.getBoundingClientRect().width + gap : (carousel.clientWidth * 0.235) + 24;
     const itemsVisible = Math.floor(carousel.clientWidth / itemWidth);
     const totalBrands = this.brands().length;
     let currentIndex = this.brandCarouselIndex();
@@ -150,7 +153,10 @@ export class App implements OnInit {
     if (!this.brandCarousel?.nativeElement) return;
 
     const carousel = this.brandCarousel.nativeElement;
-    const itemWidth = (carousel.clientWidth * 0.235) + 24;
+    const firstItem = carousel.querySelector<HTMLElement>('a, div');
+    const gapValue = getComputedStyle(carousel).gap || getComputedStyle(carousel).columnGap || '0';
+    const gap = parseFloat(gapValue as string) || 0;
+    const itemWidth = firstItem ? firstItem.getBoundingClientRect().width + gap : (carousel.clientWidth * 0.235) + 24;
     const scrollPosition = itemWidth * index;
 
     carousel.scrollBy({ left: scrollPosition - carousel.scrollLeft, behavior: 'smooth' });

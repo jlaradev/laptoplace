@@ -3,14 +3,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+import { HeaderComponent } from '../components/header.component';
+import { FooterComponent } from '../components/footer.component';
 
 @Component({
   selector: 'app-reset-password',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HeaderComponent, FooterComponent],
   template: `
-    <div class="flex flex-col min-h-screen bg-white items-center justify-center">
-      <div class="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mt-16">
+    <div class="flex flex-col min-h-screen bg-white">
+      <app-header></app-header>
+      <main class="flex-1 flex items-center justify-center">
+        <div class="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-sm mt-8">
         <h1 class="text-2xl font-bold mb-4">Restablecer contraseña</h1>
         <form (ngSubmit)="handleReset()" class="space-y-4">
           <div>
@@ -32,6 +36,8 @@ import { Router } from '@angular/router';
         <div *ngIf="message" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-semibold">{{ message }}</div>
         <div *ngIf="error" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-semibold">{{ error }}</div>
       </div>
+      </main>
+      <app-footer></app-footer>
     </div>
   `
 })
