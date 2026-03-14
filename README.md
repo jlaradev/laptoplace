@@ -1,4 +1,4 @@
-# LaptoPLace
+# LaptoPlace
 
 Full-stack laptop e-commerce built as a portfolio project. Covers the complete purchase flow — catalog browsing, cart management, Stripe checkout, order tracking, and a fully functional admin panel — deployed and production-ready.
 
